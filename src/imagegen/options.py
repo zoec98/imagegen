@@ -169,7 +169,6 @@ def _parse_image_size(
 def _add_image_size_option(
     parser: argparse.ArgumentParser, option: Mapping[str, Any]
 ) -> None:
-    opt_type = option.get("type")
     allow_dimensions = bool(option.get("allow_dimensions", False))
     flags = _get_flags_for_option("image_size", option)
     allowed_sizes = option.get("allowed_sizes") or ()

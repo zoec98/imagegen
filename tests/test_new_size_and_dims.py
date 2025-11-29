@@ -16,9 +16,7 @@ def test_image_size_must_be_allowed():
             parser=parser,
         )
     # allowed example should pass
-    allowed_sizes = MODEL_REGISTRY["schnell"]["options"]["image_size"][
-        "allowed_sizes"
-    ]
+    allowed_sizes = MODEL_REGISTRY["schnell"]["options"]["image_size"]["allowed_sizes"]
     ok_size = next(iter(allowed_sizes))
     ns = parse_args(
         ["schnell", "-p", "x", "-i", ok_size], registry=MODEL_REGISTRY, parser=parser

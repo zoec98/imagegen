@@ -6,13 +6,13 @@ import secrets
 import subprocess
 import sys
 import time
-import urllib.parse
 import urllib.request
 from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from email.message import Message
 from pathlib import Path
 from pprint import pprint
 from typing import Any
+from urllib.parse import urlparse
 
 from . import exif
 from .options import ParsedOptions
@@ -24,7 +24,7 @@ except ImportError:  # pragma: no cover
 
 
 def generate_images(
-    parsed: ParsedOptions, *, output_dir: Path | None = None
+        parsed: ParsedOptions, *, output_dir: Path | None = None
 ) -> list[Path]:
     """Invoke the target fal endpoint and download any returned images."""
 
@@ -125,7 +125,7 @@ def _iter_payload(value: Any) -> Iterable[Any]:
             for nested in reversed(list(current.values())):
                 stack.append(nested)
         elif isinstance(current, Sequence) and not isinstance(
-            current, (str, bytes, bytearray)
+                current, (str, bytes, bytearray)
         ):
             for item in reversed(list(current)):
                 stack.append(item)
@@ -143,7 +143,7 @@ def _search_first(value: Any, key: str) -> Any:
                     return map_value
                 stack.append(map_value)
         elif isinstance(current, Sequence) and not isinstance(
-            current, (str, bytes, bytearray)
+                current, (str, bytes, bytearray)
         ):
             stack.extend(current)
     return None
@@ -163,7 +163,14 @@ def _sanitize_component(component: str) -> str:
 
 
 def _download(url: str) -> tuple[bytes, str | None]:
-    with urllib.request.urlopen(url) as response:
+    _ALLOWED_SCHEMES = {"http", "https"}
+    parsed = urlparse(url)
+    if parsed.scheme not in _ALLOWED_SCHEMES:
+        raise ValueError(
+            f"Unsupported Scheme: {parsed.scheme} (allowed: {_ALLOWED_SCHEMES})"
+        )
+
+    with urllib.request.urlopen(url) as response:  # noqa: S310 - we do check in the block above.
         data = response.read()
         info = response.info()
         content_type: str | None = None
@@ -206,7 +213,7 @@ def _require_fal_client():
 
 
 def _emit_request_info(
-    endpoint: str, call_type: str, arguments: Mapping[str, Any]
+        endpoint: str, call_type: str, arguments: Mapping[str, Any]
 ) -> None:
     print("Request:")
     pprint(
@@ -233,7 +240,7 @@ def _handle_post_write(path: Path) -> None:
     if sys.platform != "darwin":
         return
     try:
-        subprocess.run(["open", str(path)], check=False)
+        subprocess.run(["/usr/bin/open", str(path)], check=False) # noqa: S603 - intended.
     except OSError:
         pass
 

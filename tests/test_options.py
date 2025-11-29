@@ -210,7 +210,9 @@ def test_help_includes_common_options():
     assert "--no-preview" in help_text
     # Inspect one model parser help to ensure common options surface there too
     subparsers_action = next(
-        action for action in parser._actions if isinstance(action, argparse._SubParsersAction)  # type: ignore[attr-defined]
+        action
+        for action in parser._actions
+        if isinstance(action, argparse._SubParsersAction)  # type: ignore[attr-defined]
     )
     schnell_parser = subparsers_action.choices["schnell"]
     assert "--no-preview" in schnell_parser.format_help()
@@ -263,7 +265,15 @@ def test_loras_list_parsing():
 def test_loras_weight_parsing():
     parser = build_parser(MODEL_REGISTRY)
     ns = parse_args(
-        ["krea-lora", "-p", "x", "--loras", "https://example.com/a.safetensors;1.2", "--loras", "b;0.5"],
+        [
+            "krea-lora",
+            "-p",
+            "x",
+            "--loras",
+            "https://example.com/a.safetensors;1.2",
+            "--loras",
+            "b;0.5",
+        ],
         registry=MODEL_REGISTRY,
         parser=parser,
     )
