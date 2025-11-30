@@ -802,6 +802,92 @@ MODEL_REGISTRY = {
             },
         },
     },
+    # Z-Image Turbo fast text-to-image
+    "z-image-turbo": {
+        "endpoint": "fal-ai/z-image/turbo",
+        "call": "subscribe",
+        "doc_url": "https://fal.ai/models/fal-ai/z-image/turbo/api#schema",
+        "options": {
+            "prompt": {
+                "type": "prompt",
+                "default": None,
+                "help": "prompt text",
+                "file_help": "prompt file in prompts/",
+            },
+            "image_size": {
+                "type": "whi",
+                "default": "landscape_4_3",
+                "help": "preset image size",
+                "allowed_sizes": [
+                    "square_hd",
+                    "square",
+                    "portrait_4_3",
+                    "portrait_16_9",
+                    "landscape_4_3",
+                    "landscape_16_9",
+                ],
+                "flags": ["-i", "--image-size"],
+            },
+            "width": {
+                "type": int,
+                "default": None,
+                "help": "image width in pixels (requires --height)",
+                "flags": ["-w", "--width"],
+            },
+            "height": {
+                "type": int,
+                "default": None,
+                "help": "image height in pixels (requires --width)",
+                "flags": ["-h", "--height"],
+            },
+            "num_inference_steps": {
+                "type": int,
+                "default": 8,
+                "help": "number of diffusion steps",
+            },
+            "seed": {
+                "type": int,
+                "default": None,
+                "help": "random seed (omit for random)",
+                "flags": ["-s", "--seed"],
+            },
+            "sync_mode": {
+                "type": bool,
+                "default": False,
+                "help": "return media as data URI (synchronous mode)",
+                "disable_help": "disable synchronous mode",
+            },
+            "num_images": {
+                "type": int,
+                "default": 1,
+                "help": "number of images to generate",
+                "flags": ["-#", "--num-images"],
+            },
+            "enable_safety_checker": {
+                "type": bool,
+                "default": True,
+                "help": "enable the model safety checker",
+                "disable_help": "disable the model safety checker",
+                "flags": ["-%", "--enable-safety-checker"],
+            },
+            "enable_prompt_expansion": {
+                "type": bool,
+                "default": False,
+                "help": "enable automatic prompt expansion",
+                "disable_help": "disable automatic prompt expansion",
+            },
+            "output_format": {
+                "type": str,
+                "default": "png",
+                "help": "output image format (png, jpeg, webp)",
+            },
+            "acceleration": {
+                "type": str,
+                "default": "none",
+                "help": "acceleration preset (none, regular, high)",
+            },
+        },
+    },
     # Realism model adds strength and output_format
     "realism": {
         "endpoint": "fal-ai/flux-realism",
@@ -893,7 +979,7 @@ MODEL_REGISTRY = {
                 "help": "output image format (jpeg, png, webp)",
             },
             "image_size": {
-                "type": str,
+                "type": "i",
                 "allowed_sizes": [
                     "21:9",
                     "16:9",
