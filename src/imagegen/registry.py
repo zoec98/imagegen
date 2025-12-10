@@ -973,12 +973,11 @@ MODEL_REGISTRY = {
                 "default": "none",
                 "help": "acceleration preset (none, regular, high)",
             },
-            "image_urls": {
+            "image_url": {
                 "type": str,
                 "default": None,
-                "help": "image URL input (repeatable)",
-                "flags": ["--image-url", "--image-urls", "-u"],
-                "action": "append",
+                "help": "source image URL",
+                "flags": ["--image-url", "-u"],
                 "metavar": "URL",
             },
             "strength": {

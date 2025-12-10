@@ -331,6 +331,10 @@ def _normalize_image_urls(raw_values: Sequence[str]) -> list[str]:
     )
 
 
+def _normalize_image_url(raw_value: str) -> str:
+    return _normalize_image_urls([raw_value])[0]
+
+
 def _add_common_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "-a",
@@ -484,8 +488,21 @@ def parse_args(
         if image_urls:
             params["image_urls"] = _normalize_image_urls(image_urls)
 
+    if "image_url" in option_specs:
+        image_url = getattr(ns, "image_url", None)
+        if image_url:
+            params["image_url"] = _normalize_image_url(image_url)
+
     for key, spec in option_specs.items():
-        if key in {"prompt", "image_size", "width", "height", "loras", "image_urls"}:
+        if key in {
+            "prompt",
+            "image_size",
+            "width",
+            "height",
+            "loras",
+            "image_urls",
+            "image_url",
+        }:
             continue
         opt_type = spec.get("type")
         if opt_type is bool:
