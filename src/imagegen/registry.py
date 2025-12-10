@@ -803,7 +803,7 @@ MODEL_REGISTRY = {
         },
     },
     # Z-Image Turbo fast text-to-image
-    "z-image-turbo": {
+    "zit": {
         "endpoint": "fal-ai/z-image/turbo",
         "call": "subscribe",
         "doc_url": "https://fal.ai/models/fal-ai/z-image/turbo/api#schema",
@@ -885,6 +885,106 @@ MODEL_REGISTRY = {
                 "type": str,
                 "default": "none",
                 "help": "acceleration preset (none, regular, high)",
+            },
+        },
+    },
+    # Z-Image Turbo image-to-image
+    "zit-edit": {
+        "endpoint": "fal-ai/z-image/turbo/image-to-image",
+        "call": "subscribe",
+        "doc_url": "https://fal.ai/models/fal-ai/z-image/turbo/image-to-image/api#schema",
+        "options": {
+            "prompt": {
+                "type": "prompt",
+                "default": None,
+                "help": "prompt text",
+                "file_help": "prompt file in prompts/",
+            },
+            "image_size": {
+                "type": "whi",
+                "default": "auto",
+                "help": "preset image size",
+                "allowed_sizes": [
+                    "square_hd",
+                    "square",
+                    "portrait_4_3",
+                    "portrait_16_9",
+                    "landscape_4_3",
+                    "landscape_16_9",
+                    "auto",
+                ],
+                "flags": ["-i", "--image-size"],
+            },
+            "width": {
+                "type": int,
+                "default": None,
+                "help": "image width in pixels (requires --height)",
+                "flags": ["-w", "--width"],
+            },
+            "height": {
+                "type": int,
+                "default": None,
+                "help": "image height in pixels (requires --width)",
+                "flags": ["-h", "--height"],
+            },
+            "num_inference_steps": {
+                "type": int,
+                "default": 8,
+                "help": "number of diffusion steps",
+            },
+            "seed": {
+                "type": int,
+                "default": None,
+                "help": "random seed (omit for random)",
+                "flags": ["-s", "--seed"],
+            },
+            "sync_mode": {
+                "type": bool,
+                "default": False,
+                "help": "return media as data URI (synchronous mode)",
+                "disable_help": "disable synchronous mode",
+            },
+            "num_images": {
+                "type": int,
+                "default": 1,
+                "help": "number of images to generate",
+                "flags": ["-#", "--num-images"],
+            },
+            "enable_safety_checker": {
+                "type": bool,
+                "default": False,
+                "help": "enable the model safety checker",
+                "disable_help": "disable the model safety checker",
+                "flags": ["-%", "--enable-safety-checker"],
+            },
+            "enable_prompt_expansion": {
+                "type": bool,
+                "default": False,
+                "help": "enable automatic prompt expansion",
+                "disable_help": "disable automatic prompt expansion",
+            },
+            "output_format": {
+                "type": str,
+                "default": "png",
+                "help": "output image format (png, jpeg, webp)",
+            },
+            "acceleration": {
+                "type": str,
+                "default": "none",
+                "help": "acceleration preset (none, regular, high)",
+            },
+            "image_urls": {
+                "type": str,
+                "default": None,
+                "help": "image URL input (repeatable)",
+                "flags": ["--image-url", "--image-urls", "-u"],
+                "action": "append",
+                "metavar": "URL",
+            },
+            "strength": {
+                "type": float,
+                "default": 0.6,
+                "help": "image-to-image conditioning strength",
             },
         },
     },
