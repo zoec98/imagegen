@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from imageedit.app import create_app
+from imageedit.app import _next_copy_name, create_app
 
 
 def _make_client(tmp_path: Path):
@@ -165,3 +165,10 @@ def test_asset_route_serves_files(tmp_path):
 
     assert response.status_code == 200
     assert response.get_data(as_text=True) == "hello, world"
+
+
+def test_next_copy_name_increments_suffixes():
+    assert _next_copy_name("truc") == "truc_copy"
+    assert _next_copy_name("truc_copy") == "truc_copy2"
+    assert _next_copy_name("truc_copy2") == "truc_copy3"
+    assert _next_copy_name("truc_copy999") == "truc_copy1000"

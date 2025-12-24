@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -56,6 +57,12 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
         include_prompt_metadata = request.form.get("include_prompt_metadata") == "on"
         image_urls_text = request.form.get("image_urls", "")
         supports_image_urls = _model_supports_image_urls(selected_model)
+        gallery_width = _parse_gallery_width(
+            request.args.get("gallery_width") or request.form.get("gallery_width")
+        )
+        gallery_height = _parse_gallery_height(
+            request.args.get("gallery_height") or request.form.get("gallery_height")
+        )
 
         if request.method == "POST":
             action = request.form.get("action", "")
@@ -87,6 +94,23 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
                             prompt_names = _list_prompt_names(prompts_dir)
                             selected_prompt = ""
                             prompt_text = ""
+                        else:
+                            error_message = (
+                                f"Prompt '{selected_prompt}' does not exist."
+                            )
+                    elif action == "duplicate":
+                        if prompt_path.exists():
+                            prompt_text = prompt_path.read_text(encoding="utf-8")
+                            duplicate_name = _next_copy_name(selected_prompt)
+                            duplicate_path = _prompt_path(prompts_dir, duplicate_name)
+                            _write_prompt(duplicate_path, prompt_text)
+                            selected_prompt = duplicate_name
+                            status_message = (
+                                f"Duplicated prompt as '{selected_prompt}'."
+                            )
+                            if selected_prompt not in prompt_names:
+                                prompt_names.append(selected_prompt)
+                                prompt_names.sort()
                         else:
                             error_message = (
                                 f"Prompt '{selected_prompt}' does not exist."
@@ -128,6 +152,12 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
                 prompt_text = prompt_path.read_text(encoding="utf-8")
 
         allowed_sizes = _get_allowed_sizes(selected_model)
+        assets_dir = Path(app.config["ASSETS_DIR"])
+        asset_paths = _list_asset_paths(assets_dir)
+        gallery_limit = gallery_width * gallery_height
+        gallery_entries = _build_gallery_entries(
+            asset_paths[:gallery_limit], assets_dir
+        )
 
         return render_template(
             "index.html",
@@ -148,6 +178,10 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
             generated_paths=generated_paths,
             asset_route="asset",
             asset_entries=asset_entries,
+            asset_count=len(asset_paths),
+            gallery_width=gallery_width,
+            gallery_height=gallery_height,
+            gallery_entries=gallery_entries,
         )
 
     @app.route("/assets/<path:filename>")
@@ -241,6 +275,17 @@ def _append_style_prompt(prompt_text: str, styles_dir: Path, style_name: str) ->
     return style_text
 
 
+def _next_copy_name(prompt_name: str) -> str:
+    match = re.fullmatch(r"(.+)_copy(\d+)?", prompt_name)
+    if match:
+        base = match.group(1)
+        number = match.group(2)
+        if number is None:
+            return f"{base}_copy2"
+        return f"{base}_copy{int(number) + 1}"
+    return f"{prompt_name}_copy"
+
+
 def _size_option_spec(model: str) -> tuple[str | None, dict[str, Any]]:
     model_info = MODEL_REGISTRY.get(model, {})
     options = model_info.get("options", {})
@@ -291,6 +336,25 @@ def _build_asset_entries(
     return entries
 
 
+def _build_gallery_entries(
+    paths: Sequence[Path], assets_dir: Path
+) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    for path in paths:
+        filename = _relative_asset_path(path, assets_dir)
+        entries.append({"display": filename, "filename": filename})
+    return entries
+
+
+def _list_asset_paths(assets_dir: Path) -> list[Path]:
+    if not assets_dir.is_absolute():
+        assets_dir = (Path.cwd() / assets_dir).resolve()
+    if not assets_dir.exists():
+        return []
+    candidates = [path for path in assets_dir.iterdir() if path.is_file()]
+    return sorted(candidates, key=lambda path: path.stat().st_mtime, reverse=True)
+
+
 def _relative_asset_path(path: Path, assets_dir: Path) -> str:
     target = path if path.is_absolute() else Path.cwd() / path
     try:
@@ -320,6 +384,25 @@ def _split_multivalue_field(raw_value: str) -> list[str]:
         parts = [part.strip() for part in chunk.split(",") if part.strip()]
         values.extend(parts)
     return values
+
+
+def _parse_gallery_width(raw_value: str | None) -> int:
+    try:
+        value = int(raw_value) if raw_value is not None else 3
+    except ValueError:
+        value = 3
+    return max(1, min(value, 5))
+
+
+def _parse_gallery_height(raw_value: str | None) -> int:
+    allowed = {value for value in range(5, 105, 5)}
+    try:
+        value = int(raw_value) if raw_value is not None else 5
+    except ValueError:
+        value = 5
+    if value not in allowed:
+        return 5
+    return value
 
 
 app = create_app()
