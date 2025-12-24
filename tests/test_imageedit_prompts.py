@@ -6,6 +6,7 @@ from imageedit.app import (
     _next_copy_name,
     _parse_checkbox,
     _parse_exif_description,
+    _prompt_name_from_asset_filename,
     create_app,
 )
 
@@ -193,3 +194,10 @@ def test_parse_checkbox_defaults_to_true_when_missing():
 def test_parse_checkbox_requires_on_value():
     assert _parse_checkbox(["off"], default=True) is False
     assert _parse_checkbox(["off", "on"], default=False) is True
+
+
+def test_prompt_name_from_asset_filename_extracts_suffix():
+    assert (
+        _prompt_name_from_asset_filename("truc-yog-1-4f6c1266eff848cb.png")
+        == "truc-yog"
+    )

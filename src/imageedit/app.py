@@ -91,6 +91,9 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
                         )
                     else:
                         prompt_text = prompt
+                        selected_prompt = _prompt_name_from_asset_filename(
+                            asset_filename
+                        )
                         if model and model in all_models:
                             selected_model = model
                         status_message = (
@@ -393,6 +396,14 @@ def _resolve_asset_path(assets_dir: Path, filename: str) -> Path | None:
     except ValueError:
         return None
     return candidate
+
+
+def _prompt_name_from_asset_filename(filename: str) -> str:
+    name = Path(filename).stem
+    match = re.search(r"-\d+", name)
+    if match:
+        name = name[: match.start()]
+    return _normalize_prompt_name(name)
 
 
 def _extract_prompt_from_exif(asset_path: Path) -> tuple[str | None, str | None]:
