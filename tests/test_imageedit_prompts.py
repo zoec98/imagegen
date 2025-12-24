@@ -6,6 +6,7 @@ from imageedit.app import (
     _next_copy_name,
     _parse_checkbox,
     _parse_exif_description,
+    _normalize_exif_text,
     _prompt_name_from_asset_filename,
     create_app,
 )
@@ -185,6 +186,12 @@ def test_parse_exif_description_extracts_model_and_prompt():
     model, prompt = _parse_exif_description(text)
     assert model == "seedream"
     assert prompt == "hello world"
+
+
+def test_normalize_exif_text_repairs_mojibake():
+    bad = "\u00e7\u0095\u00b0\u00e7\u0095\u008c\u00e9\u0096\u0080"
+    fixed = _normalize_exif_text(bad)
+    assert fixed == "\u7570\u754c\u9580"
 
 
 def test_parse_checkbox_defaults_to_true_when_missing():

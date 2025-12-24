@@ -420,7 +420,7 @@ def _extract_prompt_from_exif(asset_path: Path) -> tuple[str | None, str | None]
         text = description.decode("utf-8", errors="ignore")
     else:
         text = str(description)
-    return _parse_exif_description(text)
+    return _parse_exif_description(_normalize_exif_text(text))
 
 
 def _parse_exif_description(text: str) -> tuple[str | None, str | None]:
@@ -434,6 +434,13 @@ def _parse_exif_description(text: str) -> tuple[str | None, str | None]:
     if 0 <= model_index < prompt_index:
         model_text = text[model_index + len("Model:") : prompt_index].strip()
     return model_text or None, prompt_text or None
+
+
+def _normalize_exif_text(text: str) -> str:
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except UnicodeError:
+        return text
 
 
 def _list_asset_paths(assets_dir: Path) -> list[Path]:
