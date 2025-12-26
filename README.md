@@ -121,6 +121,7 @@ uv run imagegen <model-name> --help
 - Width/height errors: only use -w and -h together, and only for models that support dimensions; otherwise, use -i.
 - Multiple images: use -#/--num-images if the model supports it (check per‑model help).
 - Need to skip automatic previews: append `--no-preview` to any command; it works with every model.
+- PNG outputs are saved as JPEG by default; use `--no-as-jpg` to keep PNGs, or `--jpg-options="quality=60,progressive=False"` to customize JPEG encoding.
 
 
 ## Prompt editor (Flask UI)

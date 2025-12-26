@@ -1,9 +1,11 @@
 import importlib
+from io import BytesIO
 import sys
 import types
 from email.message import Message
 
 import pytest
+from PIL import Image
 
 from imagegen.options import ParsedOptions
 
@@ -92,6 +94,7 @@ def test_generate_images_run_invocation(monkeypatch, tmp_path, reload_imagegen):
             "prompt": "hello",
             "file": "prompts/cats.txt",
         },
+        as_jpg=False,
     )
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
@@ -175,6 +178,7 @@ def test_generate_images_subscribe(monkeypatch, tmp_path, reload_imagegen):
         params={
             "prompt": "hi",
         },
+        as_jpg=False,
     )
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
@@ -231,6 +235,7 @@ def test_generate_images_adds_prompt_description_when_requested(
         call="run",
         params={"prompt": "  dreamy forest scene  "},
         add_prompt_metadata=True,
+        as_jpg=False,
     )
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
@@ -276,6 +281,7 @@ def test_generate_images_skips_preview_when_disabled(
         call="run",
         params={"prompt": "skip", "file": "prompts/skip.txt"},
         preview_assets=False,
+        as_jpg=False,
     )
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
@@ -283,3 +289,50 @@ def test_generate_images_skips_preview_when_disabled(
     expected = tmp_path / "skip-1-skip-req.png"
     assert output == [expected]
     assert opened == []
+
+
+def test_generate_images_converts_png_to_jpg(monkeypatch, tmp_path, reload_imagegen):
+    def run(endpoint, *, arguments):
+        return {
+            "request_id": "conv-req",
+            "images": [{"url": "https://example.com/img.png"}],
+        }
+
+    fal_module = types.SimpleNamespace(run=run, subscribe=lambda *args, **kwargs: None)
+    mod = reload_imagegen(fal_module)
+
+    buffer = BytesIO()
+    Image.new("RGB", (4, 4), (255, 0, 0)).save(buffer, format="PNG")
+    png_bytes = buffer.getvalue()
+
+    monkeypatch.setattr(
+        mod.urllib.request, "urlopen", lambda url: _FakeResponse(png_bytes, "image/png")
+    )
+    monkeypatch.setattr(mod, "_handle_post_write", lambda path: None)
+    monkeypatch.setattr(mod, "_emit_request_info", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod, "_emit_elapsed", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        mod.exif,
+        "set_exif_data",
+        lambda path, **kwargs: True,
+    )
+
+    parsed = ParsedOptions(
+        model="schnell",
+        endpoint="fal-ai/flux/schnell",
+        call="run",
+        params={"prompt": "convert"},
+        as_jpg=True,
+        jpg_options={
+            "quality": 75,
+            "subsampling": 2,
+            "progressive": True,
+            "optimize": True,
+        },
+    )
+
+    output = mod.generate_images(parsed, output_dir=tmp_path)
+
+    expected = tmp_path / "schnell-1-conv-req.jpg"
+    assert output == [expected]
+    assert expected.read_bytes()[:2] == b"\\xff\\xd8"

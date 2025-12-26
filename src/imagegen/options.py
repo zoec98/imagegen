@@ -31,7 +31,7 @@ import argparse
 import os
 import secrets
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +40,18 @@ from dotenv import load_dotenv
 from .registry import MODEL_REGISTRY
 
 _DOTENV_FILE = Path(".env")
+_JPG_OPTION_DEFAULTS = {
+    "quality": 75,
+    "subsampling": 2,
+    "progressive": True,
+    "optimize": True,
+}
+_JPG_OPTION_TYPES = {
+    "quality": int,
+    "subsampling": int,
+    "progressive": bool,
+    "optimize": bool,
+}
 
 
 @dataclass
@@ -52,6 +64,8 @@ class ParsedOptions:
         call: Invocation type for the model (e.g., "subscribe", "run").
         params: Dictionary of parameters to pass to the model endpoint.
         add_prompt_metadata: Whether the CLI requested storing the prompt in EXIF.
+        as_jpg: Whether to convert PNG responses into JPEG files.
+        jpg_options: JPEG encoding options for PNG conversions.
     """
 
     model: str
@@ -60,6 +74,10 @@ class ParsedOptions:
     params: dict[str, Any]
     add_prompt_metadata: bool = False
     preview_assets: bool = True
+    as_jpg: bool = True
+    jpg_options: dict[str, Any] = field(
+        default_factory=lambda: dict(_JPG_OPTION_DEFAULTS)
+    )
 
 
 def _prompt_from_file(path: Path) -> str:
@@ -350,6 +368,22 @@ def _add_common_options(parser: argparse.ArgumentParser) -> None:
         default=True,
         help="do not open generated images after they are saved",
     )
+    parser.add_argument(
+        "--as-jpg",
+        dest="as_jpg",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="save PNG responses as JPEGs",
+    )
+    parser.add_argument(
+        "--jpg-options",
+        dest="jpg_options",
+        default=None,
+        help=(
+            "comma-separated JPEG options (quality, subsampling, progressive, "
+            "optimize)"
+        ),
+    )
 
 
 def _build_common_parser() -> argparse.ArgumentParser:
@@ -527,6 +561,10 @@ def parse_args(
     if model_name == "nano-banana" and "image_size" in params:
         params["aspect_ratio"] = params.pop("image_size")
 
+    jpg_options = _parse_jpg_options(
+        getattr(ns, "jpg_options", None), model_parser
+    )
+
     return ParsedOptions(
         model=model_name,
         endpoint=model_def["endpoint"],
@@ -534,4 +572,45 @@ def parse_args(
         params=params,
         add_prompt_metadata=bool(getattr(ns, "add_prompt_metadata", False)),
         preview_assets=bool(getattr(ns, "preview_assets", True)),
+        as_jpg=bool(getattr(ns, "as_jpg", True)),
+        jpg_options=jpg_options,
     )
+
+
+def _parse_jpg_options(
+    raw_value: str | None, parser: argparse.ArgumentParser
+) -> dict[str, Any]:
+    options = dict(_JPG_OPTION_DEFAULTS)
+    if not raw_value:
+        return options
+
+    for raw_entry in raw_value.split(","):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            parser.error(
+                "jpg options must be key=value pairs (quality, subsampling, "
+                "progressive, optimize)"
+            )
+        key, value = (part.strip() for part in entry.split("=", 1))
+        if key not in _JPG_OPTION_DEFAULTS:
+            valid = ", ".join(_JPG_OPTION_DEFAULTS.keys())
+            parser.error(
+                f"unknown jpg option '{key}' (valid options: {valid})"
+            )
+        if _JPG_OPTION_TYPES[key] is bool:
+            normalized = value.lower()
+            if normalized in {"true", "1", "yes"}:
+                options[key] = True
+            elif normalized in {"false", "0", "no"}:
+                options[key] = False
+            else:
+                parser.error(f"jpg option '{key}' expects true/false")
+        else:
+            try:
+                options[key] = int(value)
+            except ValueError:
+                parser.error(f"jpg option '{key}' expects an integer")
+
+    return options

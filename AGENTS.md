@@ -17,6 +17,7 @@
 ## Flask App Expectations
 - Keep the README’s “Prompt editor (Flask UI)” section accurate whenever `src/imageedit` changes (commands, features, templates).
 - The Flask app should continue to mirror the CLI registry: surfaced models, prompt editing, and key flags (`-a`, `-i`, `-u`, etc.) must stay in sync.
+- When changing imagegen CLI flags or output behavior, update README usage notes and consider whether imageedit needs matching controls.
 - Routes and templates for the app live under `src/imageedit` and `src/imageedit/templates`; update both sides when adding new UI affordances.
 - Always run `uv run flask --app imageedit.app run --debug` locally before shipping Flask changes to verify the browser flow end to end.
 

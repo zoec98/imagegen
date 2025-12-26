@@ -9,10 +9,13 @@ import time
 import urllib.request
 from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from email.message import Message
+from io import BytesIO
 from pathlib import Path
 from pprint import pprint
 from typing import Any
 from urllib.parse import urlparse
+
+from PIL import Image
 
 from . import exif
 from .options import ParsedOptions
@@ -66,9 +69,15 @@ def generate_images(
     for index, url in enumerate(urls, start=1):
         data, content_type = _download(url)
         suffix = _extension_for_url(url, content_type)
+        convert_to_jpg = parsed.as_jpg and suffix == ".png"
+        if convert_to_jpg:
+            suffix = ".jpg"
         filename = f"{base_component}-{index}-{request_component}{suffix}"
         path = output_dir / filename
-        path.write_bytes(data)
+        if convert_to_jpg:
+            _write_jpg(path, data, parsed.jpg_options)
+        else:
+            path.write_bytes(data)
         _apply_exif_metadata(path, parsed)
         if parsed.preview_assets:
             _handle_post_write(path)
@@ -258,6 +267,21 @@ def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
     success = exif.set_exif_data(path, description=description, model=model)
     if not success:
         print(f"warning: unable to update EXIF data for {path}", file=sys.stderr)
+
+
+def _write_jpg(path: Path, data: bytes, options: Mapping[str, Any]) -> None:
+    with Image.open(BytesIO(data)) as img:
+        has_alpha = img.mode in {"RGBA", "LA"} or (
+            img.mode == "P" and "transparency" in img.info
+        )
+        if has_alpha:
+            rgba = img.convert("RGBA")
+            background = Image.new("RGB", rgba.size, (255, 255, 255))
+            background.paste(rgba, mask=rgba.split()[-1])
+            img = background
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+        img.save(path, format="JPEG", **dict(options))
 
 
 __all__ = ["generate_images"]

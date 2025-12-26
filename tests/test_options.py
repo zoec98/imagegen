@@ -204,10 +204,59 @@ def test_no_preview_flag_disables_preview():
     assert enabled.preview_assets is True
 
 
+def test_as_jpg_flag_defaults_on_and_can_be_disabled():
+    parser = build_parser(MODEL_REGISTRY)
+    enabled = parse_args(
+        ["schnell", "-p", "hello world"],
+        registry=MODEL_REGISTRY,
+        parser=parser,
+    )
+    disabled = parse_args(
+        ["schnell", "-p", "hello world", "--no-as-jpg"],
+        registry=MODEL_REGISTRY,
+        parser=parser,
+    )
+    assert enabled.as_jpg is True
+    assert disabled.as_jpg is False
+
+
+def test_jpg_options_override_defaults():
+    parser = build_parser(MODEL_REGISTRY)
+    parsed = parse_args(
+        [
+            "schnell",
+            "-p",
+            "hello world",
+            "--jpg-options",
+            "optimize=False,progressive=False,quality=60,subsampling=0",
+        ],
+        registry=MODEL_REGISTRY,
+        parser=parser,
+    )
+    assert parsed.jpg_options == {
+        "quality": 60,
+        "subsampling": 0,
+        "progressive": False,
+        "optimize": False,
+    }
+
+
+def test_jpg_options_reject_invalid_key():
+    parser = build_parser(MODEL_REGISTRY)
+    with pytest.raises(SystemExit):
+        parse_args(
+            ["schnell", "-p", "hello world", "--jpg-options", "fantasy=17"],
+            registry=MODEL_REGISTRY,
+            parser=parser,
+        )
+
+
 def test_help_includes_common_options():
     parser = build_parser(MODEL_REGISTRY)
     help_text = parser.format_help()
     assert "--no-preview" in help_text
+    assert "--no-as-jpg" in help_text
+    assert "--jpg-options" in help_text
     # Inspect one model parser help to ensure common options surface there too
     subparsers_action = next(
         action
