@@ -335,4 +335,4 @@ def test_generate_images_converts_png_to_jpg(monkeypatch, tmp_path, reload_image
 
     expected = tmp_path / "schnell-1-conv-req.jpg"
     assert output == [expected]
-    assert expected.read_bytes()[:2] == b"\\xff\\xd8"
+    assert expected.read_bytes()[:2] == b"\xff\xd8"
