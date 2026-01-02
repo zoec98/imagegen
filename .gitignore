@@ -8,3 +8,7 @@
 /dist
 /.junie
 /.idea
+
+# Python
+*.pyc
+__pycache__/
