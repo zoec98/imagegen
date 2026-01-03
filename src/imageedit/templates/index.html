@@ -29,16 +29,26 @@
         </button>
       </div>
 
+
+
       <form method="post" id="main-form" class="editor-layout">
-        <div class="control-group">
-          <label for="prompt-name">Prompt Name</label>
-          <input id="prompt-name" name="prompt_name" list="prompt-options" placeholder="e.g. cyborg_ninja"
-            value="{{ selected_prompt }}" autocomplete="off">
-          <datalist id="prompt-options">
+        <div class="control-group" data-group="prompt">
+          <label for="prompt-name-preset">Prompt Name</label>
+          <select id="prompt-name-preset" name="prompt_name_preset">
+            <option value="" {% if not selected_prompt in prompt_names %}selected{% endif %}>-- New / Custom --
+            </option>
             {% for prompt in prompt_names %}
-            <option value="{{ prompt }}"></option>
+            <option value="{{ prompt }}" {% if prompt==selected_prompt %}selected{% endif %}>{{ prompt }}</option>
             {% endfor %}
-          </datalist>
+          </select>
+          <button type="button" id="duplicate-prompt-btn" class="secondary"
+            style="font-size:0.8rem; margin-top:2px;">Duplicate</button>
+          <div class="button-row" style="margin-top: 5px;">
+            <button type="button" id="save-prompt-btn" class="secondary" style="font-size:0.8rem;">Save
+              Prompt</button>
+            <button type="button" id="delete-prompt-btn" class="danger" style="font-size:0.8rem;">Delete
+              Prompt</button>
+          </div>
         </div>
 
         <div class="control-group">
@@ -50,7 +60,7 @@
           </select>
         </div>
 
-        <div class="control-group">
+        <div class="control-group" data-group="size">
           <label for="image-size-preset">Dimensions / Preset</label>
           <select id="image-size-preset" name="image_size_preset">
             {% for size in allowed_sizes %}
@@ -59,29 +69,39 @@
           </select>
         </div>
 
-        <div class="control-group">
-          <label for="style-name">Style Modifier</label>
-          <input id="style-name" name="style_name" list="style-options" placeholder="Search styles..."
-            value="{{ selected_style }}">
-          <datalist id="style-options">
+        <div class="control-group" data-group="style">
+          <label for="style-name-preset">Style Modifier</label>
+          <select id="style-name-preset" name="style_name_preset">
+            <option value="" {% if not selected_style in style_names %}selected{% endif %}>-- None / Custom --
+            </option>
             {% for style in style_names %}
-            <option value="{{ style }}"></option>
+            <option value="{{ style }}" {% if style==selected_style %}selected{% endif %}>{{ style }}</option>
             {% endfor %}
-          </datalist>
+          </select>
+          <textarea id="style-name-custom" name="style_name_custom" rows="3"
+            placeholder="Or type custom style...">{% if selected_style not in style_names %}{{ selected_style }}{% endif %}</textarea>
+          <button type="button" id="insert-style-btn" class="secondary" style="font-size:0.8rem; margin-top:2px;">Insert
+            to Prompt</button>
         </div>
 
-        {% if supports_image_urls %}
-        <div class="control-group" id="image-urls-group">
+        <div class="control-group">
+          <div class="button-row">
+            <button type="button" id="save-style-btn" class="secondary">Save Style</button>
+            <button type="button" id="delete-style-btn" class="danger">Delete Style</button>
+          </div>
+        </div>
+
+        <div class="control-group" id="image-urls-group" {% if not supports_image_urls %}style="display:none;" {% endif
+          %}>
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
             <label for="image-urls" style="margin-bottom:0;">Source Image URLs</label>
             <button type="button" id="upload-image-btn" class="secondary"
-              style="font-size:0.75rem; padding:0.25rem 0.5rem;">Upload Local</button>
+              style="font-size:0.8rem; padding: 2px 8px;">Upload Local Image</button>
           </div>
           <textarea id="image-urls" name="image_urls" rows="3"
             placeholder="https://...">{{ image_urls_text }}</textarea>
           <input type="file" id="local-image-upload" accept="image/*" style="display:none;">
         </div>
-        {% endif %}
 
         <div class="control-group">
           <label class="checkbox-label" style="display:flex;">
@@ -89,23 +109,25 @@
             <input type="checkbox" name="include_prompt_metadata" value="on" {% if include_prompt_metadata %}checked{%
               endif %}>
             <span>Save Prompt in EXIF Data</span>
+            <span class="info-icon"
+              data-tooltip="Embeds the model name and prompt text into the image file's metadata tags.">?</span>
           </label>
-        </div>
-
-        <div class="button-row">
-          <button type="submit" name="action" value="load">Load</button>
-          <button type="submit" name="action" value="save">Save</button>
-        </div>
-        <div class="button-row">
-          <button type="submit" name="action" value="duplicate">Duplicate</button>
-          <button type="submit" name="action" value="delete" class="danger"
-            data-confirm="Delete this prompt permanently?">Delete</button>
         </div>
 
         <!-- Hidden button for style append logic -->
         <button type="submit" name="action" value="append_style" id="append-style-button"
           style="display:none;">Append</button>
       </form>
+
+      <!-- Attribution -->
+      <a href="https://github.com/zoec98/imagegen" target="_blank" rel="noopener noreferrer" class="repo-link"
+        style="margin-top: auto;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom;">
+          <path
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+        </svg>
+        Original by zoec98
+      </a>
     </aside>
 
     <!-- Main: Editor & Gallery -->
@@ -119,260 +141,148 @@
             <span style="font-size: 1.2em;">&rarr;</span>
           </button>
         </div>
+        <textarea form="main-form" id="prompt-text" name="prompt_text" spellcheck="true"
+          placeholder="Describe the image you want to generate...">{{ prompt_text }}</textarea>
+      </div>
 
-        <form method="post" id="main-form" class="editor-layout">
-          <div class="control-group" data-group="prompt">
-            <label for="prompt-name-preset">Prompt Name</label>
-            <select id="prompt-name-preset" name="prompt_name_preset">
-              <option value="" {% if not selected_prompt in prompt_names %}selected{% endif %}>-- New / Custom --
-              </option>
-              {% for prompt in prompt_names %}
-              <option value="{{ prompt }}" {% if prompt==selected_prompt %}selected{% endif %}>{{ prompt }}</option>
-              {% endfor %}
-            </select>
-            <button type="button" id="duplicate-prompt-btn" class="secondary"
-              style="font-size:0.8rem; margin-top:2px;">Duplicate</button>
-            <div class="button-row" style="margin-top: 5px;">
-              <button type="button" id="save-prompt-btn" class="secondary" style="font-size:0.8rem;">Save
-                Prompt</button>
-              <button type="button" id="delete-prompt-btn" class="danger" style="font-size:0.8rem;">Delete
-                Prompt</button>
-            </div>
-          </div>
-
-          <div class="control-group">
-            <label for="model-name">AI Model</label>
-            <select id="model-name" name="model_name">
-              {% for model in model_names %}
-              <option value="{{ model }}" {% if model==selected_model %}selected{% endif %}>{{ model }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="control-group" data-group="size">
-            <label for="image-size-preset">Dimensions / Preset</label>
-            <select id="image-size-preset" name="image_size_preset">
-              {% for size in allowed_sizes %}
-              <option value="{{ size }}" {% if size==image_size_value %}selected{% endif %}>{{ size }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="control-group" data-group="style">
-            <label for="style-name-preset">Style Modifier</label>
-            <select id="style-name-preset" name="style_name_preset">
-              <option value="" {% if not selected_style in style_names %}selected{% endif %}>-- None / Custom --
-              </option>
-              {% for style in style_names %}
-              <option value="{{ style }}" {% if style==selected_style %}selected{% endif %}>{{ style }}</option>
-              {% endfor %}
-            </select>
-            <textarea id="style-name-custom" name="style_name_custom" rows="3"
-              placeholder="Or type custom style...">{% if selected_style not in style_names %}{{ selected_style }}{% endif %}</textarea>
-            <button type="button" id="insert-style-btn" class="secondary"
-              style="font-size:0.8rem; margin-top:2px;">Insert
-              to Prompt</button>
-          </div>
-
-          <div class="control-group">
-            <div class="button-row">
-              <button type="button" id="save-style-btn" class="secondary">Save Style</button>
-              <button type="button" id="delete-style-btn" class="danger">Delete Style</button>
-            </div>
-          </div>
-
-          <div class="control-group" id="image-urls-group" {% if not supports_image_urls %}style="display:none;" {%
-            endif %}>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-              <label for="image-urls" style="margin-bottom:0;">Source Image URLs</label>
-              <button type="button" id="upload-image-btn" class="secondary"
-                style="font-size:0.8rem; padding: 2px 8px;">Upload Local Image</button>
-            </div>
-            <textarea id="image-urls" name="image_urls" rows="3"
-              placeholder="https://...">{{ image_urls_text }}</textarea>
-            <input type="file" id="local-image-upload" accept="image/*" style="display:none;">
-          </div>
-
-          <div class="control-group">
-            <label class="checkbox-label" style="display:flex;">
-              <input type="hidden" name="include_prompt_metadata" value="off">
-              <input type="checkbox" name="include_prompt_metadata" value="on" {% if include_prompt_metadata %}checked{%
-                endif %}>
-              <span>Save Prompt in EXIF Data</span>
-              <span class="info-icon"
-                data-tooltip="Embeds the model name and prompt text into the image file's metadata tags.">?</span>
-            </label>
-          </div>
-
-          <!-- Hidden button for style append logic -->
-          <button type="submit" name="action" value="append_style" id="append-style-button"
-            style="display:none;">Append</button>
-        </form>
-
-        <!-- Attribution -->
-        <a href="https://github.com/zoec98/imagegen" target="_blank" rel="noopener noreferrer" class="repo-link"
-          style="margin-top: auto;">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom;">
-            <path
-              d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
-          </svg>
-          Original by zoec98
-        </a>
-        </aside>
-
-        <!-- Main: Editor & Gallery -->
-        <main>
-          <!-- Prompt Area -->
-          <div class="prompt-container">
-            <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-              <label for="prompt-text">PROMPT TEXT</label>
-              <button class="primary" type="submit" form="main-form" name="action" value="run">
-                <span>Generate Image</span>
-                <span style="font-size: 1.2em;">&rarr;</span>
-              </button>
-            </div>
-            <textarea form="main-form" id="prompt-text" name="prompt_text" spellcheck="true"
-              placeholder="Describe the image you want to generate...">{{ prompt_text }}</textarea>
-          </div>
-
-          <!-- Generated Results (Immediate) -->
-          {% if generated_paths %}
-          <section class="run-results">
-            <h3>Generated Results</h3>
-            <div class="gallery" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-              {% for entry in asset_entries %}
-              <div class="asset-card">
-                <a href="{{ url_for(asset_route, filename=entry.filename) }}" target="_blank">
-                  <img src="{{ url_for(asset_route, filename=entry.filename) }}" loading="lazy">
-                </a>
-                <div class="asset-meta">
-                  <div class="asset-filename">{{ entry.display }}</div>
-                  <form method="post" class="asset-actions">
-                    <input type="hidden" name="asset_filename" value="{{ entry.filename }}">
-                    <!-- pass through state to keep UI consistent -->
-                    <input type="hidden" name="prompt_name" value="{{ selected_prompt }}">
-                    <input type="hidden" name="model_name" value="{{ selected_model }}">
-                    <input type="hidden" name="prompt_text" value="{{ prompt_text }}">
-                    <button type="submit" name="action" value="asset_load">Use Params</button>
-                    <button type="submit" name="action" value="asset_delete" class="danger"
-                      data-confirm="Delete this asset?">Delete</button>
-                  </form>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </section>
-          {% endif %}
-
-          <!-- Asset Library -->
-          <section>
-            <div class="gallery-header">
-              <h3>Library ({{ asset_count }})</h3>
-              <form method="get" id="gallery-controls" style="display:flex; gap:1rem; align-items:center;">
-                <input type="hidden" name="prompt" value="{{ selected_prompt }}">
-                <div style="display:flex; align-items:center; gap:0.5rem;">
-                  <label for="gallery-width">Cols</label>
-                  <select id="gallery-width" name="gallery_width" style="width:auto; padding:0.25rem;">
-                    {% for width in range(1, 6) %}
-                    <option value="{{ width }}" {% if width==gallery_width %}selected{% endif %}>{{ width }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
+      <!-- Generated Results (Immediate) -->
+      {% if generated_paths %}
+      <section class="run-results">
+        <h3>Generated Results</h3>
+        <div class="gallery" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+          {% for entry in asset_entries %}
+          <div class="asset-card">
+            <a href="{{ url_for(asset_route, filename=entry.filename) }}" target="_blank">
+              <img src="{{ url_for(asset_route, filename=entry.filename) }}" loading="lazy">
+            </a>
+            <div class="asset-meta">
+              <div class="asset-filename">{{ entry.display }}</div>
+              <form method="post" class="asset-actions">
+                <input type="hidden" name="asset_filename" value="{{ entry.filename }}">
+                <!-- pass through state to keep UI consistent -->
+                <input type="hidden" name="prompt_name" value="{{ selected_prompt }}">
+                <input type="hidden" name="model_name" value="{{ selected_model }}">
+                <input type="hidden" name="prompt_text" value="{{ prompt_text }}">
+                <button type="submit" name="action" value="asset_load">Use Params</button>
+                <button type="submit" name="action" value="asset_delete" class="danger"
+                  data-confirm="Delete this asset?">Delete</button>
               </form>
             </div>
-
-            <div class="gallery cols-{{ gallery_width }}">
-              {% for entry in gallery_entries %}
-              <div class="asset-card">
-                <a href="{{ url_for(asset_route, filename=entry.filename) }}" target="_blank">
-                  <img src="{{ url_for(asset_route, filename=entry.filename) }}" loading="lazy">
-                </a>
-                <div class="asset-meta">
-                  <div class="asset-filename">{{ entry.display }}</div>
-                  <form method="post" class="asset-actions">
-                    <input type="hidden" name="asset_filename" value="{{ entry.filename }}">
-                    <input type="hidden" name="prompt_name" value="{{ selected_prompt }}">
-                    <input type="hidden" name="model_name" value="{{ selected_model }}">
-                    <button type="submit" name="action" value="asset_load">Load</button>
-                    <button type="submit" name="action" value="asset_delete" class="danger"
-                      data-confirm="Delete this asset?">Delete</button>
-                  </form>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </section>
-        </main>
-        <!-- Save Style Modal -->
-        <div id="save-style-modal" class="modal-overlay">
-          <div class="modal">
-            <div class="modal-header">
-              <h3>Save Style</h3>
-            </div>
-            <div class="modal-body">
-              <label for="new-style-name" style="display:block; margin-bottom:0.5rem;">Style Name</label>
-              <input type="text" id="new-style-name" placeholder="E.g., Cinematic Lighting" autocomplete="off">
-            </div>
-            <div class="modal-footer">
-              <button type="button" id="cancel-style-btn" class="secondary">Cancel</button>
-              <button type="button" id="confirm-save-style-btn" class="primary">Save</button>
-            </div>
           </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- Asset Library -->
+      <section>
+        <div class="gallery-header">
+          <h3>Library ({{ asset_count }})</h3>
+          <form method="get" id="gallery-controls" style="display:flex; gap:1rem; align-items:center;">
+            <input type="hidden" name="prompt" value="{{ selected_prompt }}">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <label for="gallery-width">Cols</label>
+              <select id="gallery-width" name="gallery_width" style="width:auto; padding:0.25rem;">
+                {% for width in range(1, 6) %}
+                <option value="{{ width }}" {% if width==gallery_width %}selected{% endif %}>{{ width }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </form>
         </div>
 
-        <!-- Delete Style Confirmation Modal -->
-        <div id="delete-style-modal" class="modal-overlay">
-          <div class="modal">
-            <div class="modal-header">
-              <h3>Delete Style</h3>
-            </div>
-            <div class="modal-body">
-              <p>Are you sure you want to delete the style "<span id="delete-style-name-display"></span>"?</p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" id="cancel-delete-style-btn" class="secondary">Cancel</button>
-              <button type="button" id="confirm-delete-style-btn" class="danger">Yes, Delete</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Save Prompt Modal -->
-        <div id="save-prompt-modal" class="modal-overlay">
-          <div class="modal">
-            <div class="modal-header">
-              <h3>Save Prompt</h3>
-            </div>
-            <div class="modal-body">
-              <label for="new-prompt-name" style="display:block; margin-bottom:0.5rem;">Prompt Name</label>
-              <input type="text" id="new-prompt-name" placeholder="E.g., Starry Night landscape" autocomplete="off">
-            </div>
-            <div class="modal-footer">
-              <button type="button" id="cancel-prompt-btn" class="secondary">Cancel</button>
-              <button type="button" id="confirm-save-prompt-btn" class="primary">Save</button>
+        <div class="gallery cols-{{ gallery_width }}">
+          {% for entry in gallery_entries %}
+          <div class="asset-card">
+            <a href="{{ url_for(asset_route, filename=entry.filename) }}" target="_blank">
+              <img src="{{ url_for(asset_route, filename=entry.filename) }}" loading="lazy">
+            </a>
+            <div class="asset-meta">
+              <div class="asset-filename">{{ entry.display }}</div>
+              <form method="post" class="asset-actions">
+                <input type="hidden" name="asset_filename" value="{{ entry.filename }}">
+                <input type="hidden" name="prompt_name" value="{{ selected_prompt }}">
+                <input type="hidden" name="model_name" value="{{ selected_model }}">
+                <button type="submit" name="action" value="asset_load">Load</button>
+                <button type="submit" name="action" value="asset_delete" class="danger"
+                  data-confirm="Delete this asset?">Delete</button>
+              </form>
             </div>
           </div>
+          {% endfor %}
         </div>
-
-        <!-- Delete Prompt Confirmation Modal -->
-        <div id="delete-prompt-modal" class="modal-overlay">
-          <div class="modal">
-            <div class="modal-header">
-              <h3>Delete Prompt</h3>
-            </div>
-            <div class="modal-body">
-              <p>Are you sure you want to delete the prompt "<span id="delete-prompt-name-display"></span>"?</p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" id="cancel-delete-prompt-btn" class="secondary">Cancel</button>
-              <button type="button" id="confirm-delete-prompt-btn" class="danger">Yes, Delete</button>
-            </div>
-          </div>
+      </section>
+    </main>
+    <!-- Save Style Modal -->
+    <div id="save-style-modal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Save Style</h3>
         </div>
+        <div class="modal-body">
+          <label for="new-style-name" style="display:block; margin-bottom:0.5rem;">Style Name</label>
+          <input type="text" id="new-style-name" placeholder="E.g., Cinematic Lighting" autocomplete="off">
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancel-style-btn" class="secondary">Cancel</button>
+          <button type="button" id="confirm-save-style-btn" class="primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Style Confirmation Modal -->
+    <div id="delete-style-modal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Delete Style</h3>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete the style "<span id="delete-style-name-display"></span>"?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancel-delete-style-btn" class="secondary">Cancel</button>
+          <button type="button" id="confirm-delete-style-btn" class="danger">Yes, Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Save Prompt Modal -->
+    <div id="save-prompt-modal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Save Prompt</h3>
+        </div>
+        <div class="modal-body">
+          <label for="new-prompt-name" style="display:block; margin-bottom:0.5rem;">Prompt Name</label>
+          <input type="text" id="new-prompt-name" placeholder="E.g., Starry Night landscape" autocomplete="off">
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancel-prompt-btn" class="secondary">Cancel</button>
+          <button type="button" id="confirm-save-prompt-btn" class="primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Prompt Confirmation Modal -->
+    <div id="delete-prompt-modal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Delete Prompt</h3>
+        </div>
+        <div class="modal-body">
+          <p>Are you sure you want to delete the prompt "<span id="delete-prompt-name-display"></span>"?</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancel-delete-prompt-btn" class="secondary">Cancel</button>
+          <button type="button" id="confirm-delete-prompt-btn" class="danger">Yes, Delete</button>
+        </div>
+      </div>
+    </div>
 
 
-      </div> <!-- container -->
+  </div> <!-- container -->
 
-      <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 
 </html>
