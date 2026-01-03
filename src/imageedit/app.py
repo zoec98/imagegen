@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+import os
 from pathlib import Path
 from typing import Any
 
 import piexif  # type: ignore[import-untyped]
 from PIL import Image
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, send_from_directory
 
 from imagegen.imagegen import generate_images
@@ -16,15 +18,30 @@ from imagegen.options import parse_args
 from imagegen.registry import MODEL_REGISTRY
 
 
+def _max_content_length_from_env(default: int) -> int:
+    raw_value = os.environ.get("MAX_CONTENT_LENGTH")
+    if not raw_value:
+        return default
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return default
+    if parsed <= 0:
+        return default
+    return parsed
+
+
 def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     """Create and configure the Flask application."""
 
+    load_dotenv(Path(".env"))
+    max_content_length = _max_content_length_from_env(100 * 1024 * 1024)
     app = Flask(__name__)
     app.config.from_mapping(
         PROMPTS_DIR=Path("prompts"),
         ASSETS_DIR=Path("assets"),
         STYLES_DIR=Path("styles"),
-        MAX_CONTENT_LENGTH=100 * 1024 * 1024,
+        MAX_CONTENT_LENGTH=max_content_length,
     )
     if config:
         app.config.update(config)
