@@ -8,3 +8,10 @@
 /dist
 /.junie
 /.idea
+__pycache__/
+*.pyc
+prompts/*.txt
+!prompts/*_example.txt
+styles/*.txt
+!styles/*_example.txt
+.DS_Store

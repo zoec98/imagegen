@@ -284,4 +284,15 @@ def _write_jpg(path: Path, data: bytes, options: Mapping[str, Any]) -> None:
         img.save(path, format="JPEG", **dict(options))
 
 
-__all__ = ["generate_images"]
+def upload_image(path: Path) -> str:
+    """Upload a local file to fal storage and return the URL."""
+    client = _require_fal_client()
+    # verify path exists
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    
+    url = client.upload_file(str(path))
+    return url
+
+
+__all__ = ["generate_images", "upload_image"]

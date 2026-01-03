@@ -72,9 +72,14 @@
       </div>
 
       {% if supports_image_urls %}
-      <div class="control-group">
-        <label for="image-urls">Source Image URLs</label>
+      <div class="control-group" id="image-urls-group">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+          <label for="image-urls" style="margin-bottom:0;">Source Image URLs</label>
+          <button type="button" id="upload-image-btn" class="secondary"
+            style="font-size:0.75rem; padding:0.25rem 0.5rem;">Upload Local</button>
+        </div>
         <textarea id="image-urls" name="image_urls" rows="3" placeholder="https://...">{{ image_urls_text }}</textarea>
+        <input type="file" id="local-image-upload" accept="image/*" style="display:none;">
       </div>
       {% endif %}
 
