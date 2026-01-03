@@ -11,7 +11,7 @@ import piexif  # type: ignore[import-untyped]
 from PIL import Image
 from flask import Flask, render_template, request, send_from_directory
 
-from imagegen.imagegen import generate_images, upload_image
+from imagegen.imagegen import generate_images
 from imagegen.options import parse_args
 from imagegen.registry import MODEL_REGISTRY
 
@@ -224,29 +224,45 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     def api_upload():
         """Handle local image upload to fal cloud."""
         import tempfile
-        
+
         if "file" not in request.files:
             return {"error": "No file provided"}, 400
-        
+
         file = request.files["file"]
         if file.filename == "":
             return {"error": "No file selected"}, 400
-        
+
+        temp_path: Path | None = None
         try:
             # Save to temp file and upload
-            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as temp:
+            with tempfile.NamedTemporaryFile(
+                delete=False, suffix=Path(file.filename).suffix
+            ) as temp:
                 temp_path = Path(temp.name)
                 file.save(temp_path)
-                try:
-                    url = upload_image(temp_path)
-                finally:
-                    temp_path.unlink()  # Clean up temp file
-                
+            url = upload_image(temp_path)
             return {"url": url}
         except Exception as e:
             return {"error": str(e)}, 500
+        finally:
+            if temp_path is not None:
+                temp_path.unlink(missing_ok=True)
 
     return app
+
+
+def upload_image(path: Path) -> str:
+    """Upload a local file to fal storage and return the URL."""
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    try:
+        import fal_client as imported  # type: ignore
+    except ImportError as exc:  # pragma: no cover
+        raise RuntimeError(
+            "fal_client is required to upload images. "
+            "Install the fal SDK and ensure it is importable."
+        ) from exc
+    return imported.upload_file(str(path))
 
 
 def _run_generation(
