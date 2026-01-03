@@ -50,14 +50,12 @@
       </div>
 
       <div class="control-group">
-        <label for="image-size">Dimensions / Preset</label>
-        <input id="image-size" name="image_size" list="size-options" value="{{ image_size_value }}"
-          placeholder="e.g. landscape_4_3">
-        <datalist id="size-options">
+        <label for="image-size-preset">Dimensions / Preset</label>
+        <select id="image-size-preset" name="image_size_preset">
           {% for size in allowed_sizes %}
-          <option value="{{ size }}"></option>
+          <option value="{{ size }}" {% if size==image_size_value %}selected{% endif %}>{{ size }}</option>
           {% endfor %}
-        </datalist>
+        </select>
       </div>
 
       <div class="control-group">

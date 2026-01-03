@@ -72,7 +72,7 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
             or (all_models[0] if all_models else "")
         )
         image_size_value = request.form.get(
-            "image_size", _default_option(selected_model, "image_size")
+            "image_size_preset", _default_option(selected_model, "image_size")
         )
         include_prompt_metadata = _parse_checkbox(
             request.form.getlist("include_prompt_metadata"), default=True
