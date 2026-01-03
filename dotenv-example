@@ -1,13 +1,4 @@
 # Edit this file to match and install as .env in this directory
-
-# Generate a fal.ai API key and put it here.
 FAL_KEY="<add fal.ai api key here>"
-
-# If you have your own local web server for .safetensor files for lora, or if you have your own local web server,
-# profile the base URLs here. The local web server for images is not actually needed any more for imageedit,
-# we are using the fal.ai API now.
 SAFETENSORS_URL="https://example.com/safetensors_for_lora"
 SOURCE_IMAGE_URL="https://example.com/images_for_edit"
-
-# imageedit uses this as the max allowed file upload length (100 MB)
-MAX_CONTENT_LENGTH=104857600

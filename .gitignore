@@ -1,5 +1,16 @@
 .env
 .venv
+# Python
+*.pyc
+__pycache__/
+
+# Prompts
+/prompts/*
+!/prompts/*_example.txt
+
+# Styles
+/styles/*
+!/styles/*_example.txte
 .python-version
 *.jpg
 *.png
@@ -8,10 +19,4 @@
 /dist
 /.junie
 /.idea
-__pycache__/
-*.pyc
-prompts/*.txt
-!prompts/*_example.txt
-styles/*.txt
-!styles/*_example.txt
 .DS_Store
