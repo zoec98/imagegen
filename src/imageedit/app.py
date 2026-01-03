@@ -661,14 +661,11 @@ def _parse_gallery_width(raw_value: str | None) -> int:
 
 
 def _parse_gallery_height(raw_value: str | None) -> int:
-    allowed = {value for value in range(5, 105, 5)}
     try:
-        value = int(raw_value) if raw_value is not None else 5
+        value = int(raw_value) if raw_value is not None else 100
     except ValueError:
-        value = 5
-    if value not in allowed:
-        return 5
-    return value
+        value = 100
+    return max(1, value)
 
 
 app = create_app()
