@@ -82,6 +82,13 @@ function initStyleControls() {
                 alert('Please enter some style text to save.');
                 return;
             }
+
+            // Pre-populate name if a preset is selected
+            const currentName = styleSelect.value;
+            if (currentName) {
+                nameInput.value = currentName;
+            }
+
             modal.classList.add('active');
             nameInput.focus();
         };
