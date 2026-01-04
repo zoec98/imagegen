@@ -246,21 +246,34 @@ def test_generate_images_adds_prompt_description_when_requested(
         model="schnell",
         endpoint="fal-ai/flux/schnell",
         call="run",
-        params={"prompt": "  dreamy forest scene  "},
+        params={
+            "prompt": "  dreamy forest scene  ",
+            "file": "prompts/dreamy.txt",
+            "image_url": "https://example.com/k/cookie.jpg",
+            "image_urls": ["https://example.com/k/cookie.png"],
+            "loras": [
+                {"path": "https://example.com/j/dusty.safetensors", "scale": 0.5}
+            ],
+        },
         add_prompt_metadata=True,
         as_jpg=False,
     )
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
 
-    expected = tmp_path / "dreamy-forest-scene-20260104_114516.png"
+    expected = tmp_path / "dreamy-dreamy-forest-scene-20260104_114516.png"
     assert output == [expected]
     expected_description = json.dumps(
         {
             "model": parsed.model,
             "endpoint": parsed.endpoint,
             "call": parsed.call,
-            "arguments": {"prompt": "  dreamy forest scene  "},
+            "arguments": {
+                "prompt": "  dreamy forest scene  ",
+                "image_url": "cookie.jpg",
+                "image_urls": ["cookie.png"],
+                "loras": [{"path": "dusty.safetensors", "scale": 0.5}],
+            },
         },
         ensure_ascii=False,
         separators=(",", ":"),

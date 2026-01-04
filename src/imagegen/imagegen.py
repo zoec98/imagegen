@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 from PIL import Image
 
 from . import exif
-from .options import ParsedOptions
+from .options import ParsedOptions, get_safetensors_url, get_source_image_url
 
 try:  # pragma: no cover - lazy import fallback
     import fal_client  # type: ignore
@@ -297,7 +297,46 @@ def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
     description: str | None = None
     if parsed.add_prompt_metadata:
         arguments = dict(parsed.params)
+        # We don't want to leak local file names
         arguments.pop("file", None)
+        # We don't want to leak image server URLs
+        source_base = get_source_image_url()
+        safetensors_base = get_safetensors_url()
+        for key in ("image_url", "image_urls"):
+            value = arguments.get(key)
+            if isinstance(value, str):
+                if value.startswith(source_base):
+                    arguments[key] = value[len(source_base) :]
+            elif isinstance(value, list):
+                shortened: list[Any] = []
+                for entry in value:
+                    if isinstance(entry, str) and entry.startswith(source_base):
+                        shortened.append(entry[len(source_base) :])
+                    else:
+                        shortened.append(entry)
+                arguments[key] = shortened
+        # Also don't leak SAFETENSOR URLs
+        loras_value = arguments.get("loras")
+        if isinstance(loras_value, list):
+            normalized_loras: list[Any] = []
+            for entry in loras_value:
+                if isinstance(entry, dict):
+                    lora_path = entry.get("path")
+                    if isinstance(lora_path, str) and lora_path.startswith(
+                        safetensors_base
+                    ):
+                        updated = dict(entry)
+                        updated["path"] = lora_path[len(safetensors_base) :]
+                        normalized_loras.append(updated)
+                    else:
+                        normalized_loras.append(entry)
+                elif isinstance(entry, str) and entry.startswith(safetensors_base):
+                    normalized_loras.append(entry[len(safetensors_base) :])
+                else:
+                    normalized_loras.append(entry)
+            arguments["loras"] = normalized_loras
+
+        # ready to save the prompt in exif
         description = json.dumps(
             {
                 "model": parsed.model,
