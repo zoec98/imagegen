@@ -37,29 +37,27 @@ def test_lists_existing_prompts(tmp_path):
 
 
 def test_save_creates_or_updates_prompt(tmp_path):
+    # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
 
     response = client.post(
-        "/",
-        data={"prompt_name": "new_prompt", "prompt_text": "content", "action": "save"},
+        "/api/save-prompt",
+        json={"name": "new_prompt", "text": "content"},
     )
 
     saved_path = prompts_dir / "new_prompt.txt"
     assert saved_path.exists()
     assert saved_path.read_text(encoding="utf-8") == "content"
-    assert "Saved prompt" in response.get_data(as_text=True)
+    assert response.get_json() == {"success": True, "saved_name": "new_prompt"}
 
 
 def test_save_normalizes_newlines(tmp_path):
+    # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
 
     client.post(
-        "/",
-        data={
-            "prompt_name": "win",
-            "prompt_text": "line1\r\nline2\rline3\nline4",
-            "action": "save",
-        },
+        "/api/save-prompt",
+        json={"name": "win", "text": "line1\r\nline2\rline3\nline4"},
     )
 
     saved_path = prompts_dir / "win.txt"
@@ -67,30 +65,31 @@ def test_save_normalizes_newlines(tmp_path):
 
 
 def test_load_reads_existing_prompt(tmp_path):
+    # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
     prompts_dir.mkdir(parents=True, exist_ok=True)
     (prompts_dir / "beta.txt").write_text("beta content", encoding="utf-8")
 
-    response = client.post("/", data={"prompt_name": "beta", "action": "load"})
+    response = client.get("/api/prompt/beta")
 
-    body = response.get_data(as_text=True)
-    assert "beta content" in body
-    assert "Loaded prompt" in body
+    assert response.get_json() == {"text": "beta content"}
 
 
 def test_delete_removes_prompt(tmp_path):
+    # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
     prompts_dir.mkdir(parents=True, exist_ok=True)
     target = prompts_dir / "gamma.txt"
     target.write_text("gamma", encoding="utf-8")
 
-    response = client.post("/", data={"prompt_name": "gamma", "action": "delete"})
+    response = client.post("/api/delete-prompt", json={"name": "gamma"})
 
     assert not target.exists()
-    assert "Deleted prompt" in response.get_data(as_text=True)
+    assert response.get_json() == {"success": True, "deleted_name": "gamma"}
 
 
 def test_run_generates_images(monkeypatch, tmp_path):
+    # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
     prompts_dir.mkdir(parents=True, exist_ok=True)
     prompt_path = prompts_dir / "delta.txt"
@@ -110,7 +109,7 @@ def test_run_generates_images(monkeypatch, tmp_path):
             "prompt_name": "delta",
             "prompt_text": "delta text new",
             "model_name": "schnell",
-            "image_size": "square",
+            "image_size_preset": "square",
             "include_prompt_metadata": "on",
             "action": "run",
         },
@@ -127,6 +126,7 @@ def test_run_generates_images(monkeypatch, tmp_path):
 
 
 def test_run_with_image_urls(monkeypatch, tmp_path):
+    # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
     prompts_dir.mkdir(parents=True, exist_ok=True)
     prompt_path = prompts_dir / "edit.txt"
@@ -146,7 +146,7 @@ def test_run_with_image_urls(monkeypatch, tmp_path):
             "prompt_name": "edit",
             "prompt_text": "new text",
             "model_name": "qwen-image-edit",
-            "image_size": "portrait_4_3",
+            "image_size_preset": "portrait_4_3",
             "image_urls": "https://example.com/a.jpg\nhttps://example.com/b.png",
             "action": "run",
         },

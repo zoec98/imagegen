@@ -41,6 +41,7 @@ def reload_imagegen(monkeypatch):
 
 
 def test_generate_images_run_invocation(monkeypatch, tmp_path, reload_imagegen):
+    # REVIEW: 2026-01-04 editor upgrade
     captured = {}
 
     def run(endpoint, *, arguments):
@@ -76,6 +77,7 @@ def test_generate_images_run_invocation(monkeypatch, tmp_path, reload_imagegen):
 
     perf_values = iter([100.0, 101.5])
     monkeypatch.setattr(mod.time, "perf_counter", lambda: next(perf_values))
+    monkeypatch.setattr(mod.time, "strftime", lambda *_args, **_kwargs: "20260104_114516")
 
     responses = iter(
         [
@@ -103,8 +105,8 @@ def test_generate_images_run_invocation(monkeypatch, tmp_path, reload_imagegen):
     assert captured["arguments"]["prompt"] == "hello"
     assert len(output) == 2
 
-    expected_1 = tmp_path / "cats-1-run-req-123.png"
-    expected_2 = tmp_path / "cats-2-run-req-123.jpg"
+    expected_1 = tmp_path / "cats-hello-20260104_114516.png"
+    expected_2 = tmp_path / "cats-hello-20260104_114516.jpg"
 
     assert output == [expected_1, expected_2]
     assert expected_1.read_bytes() == b"img1"
@@ -125,6 +127,7 @@ def test_generate_images_run_invocation(monkeypatch, tmp_path, reload_imagegen):
 
 
 def test_generate_images_subscribe(monkeypatch, tmp_path, reload_imagegen):
+    # REVIEW: 2026-01-04 editor upgrade
     class Subscription:
         def __init__(self):
             self.request_id = "sub-req-789"
@@ -164,6 +167,7 @@ def test_generate_images_subscribe(monkeypatch, tmp_path, reload_imagegen):
 
     perf_values = iter([200.0, 205.25])
     monkeypatch.setattr(mod.time, "perf_counter", lambda: next(perf_values))
+    monkeypatch.setattr(mod.time, "strftime", lambda *_args, **_kwargs: "20260104_114516")
 
     monkeypatch.setattr(
         mod.urllib.request,
@@ -183,7 +187,7 @@ def test_generate_images_subscribe(monkeypatch, tmp_path, reload_imagegen):
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
 
-    expected = tmp_path / "dev-1-sub-req-789.png"
+    expected = tmp_path / "hi-20260104_114516.png"
     assert output == [expected]
     assert expected.read_bytes() == b"sub"
     assert captured["endpoint"] == "fal-ai/flux/dev"
@@ -206,6 +210,7 @@ def test_generate_images_subscribe(monkeypatch, tmp_path, reload_imagegen):
 def test_generate_images_adds_prompt_description_when_requested(
     monkeypatch, tmp_path, reload_imagegen
 ):
+    # REVIEW: 2026-01-04 editor upgrade
     def run(endpoint, *, arguments):
         return {
             "request_id": "abc123",
@@ -221,6 +226,7 @@ def test_generate_images_adds_prompt_description_when_requested(
     monkeypatch.setattr(mod, "_handle_post_write", lambda path: None)
     monkeypatch.setattr(mod, "_emit_request_info", lambda *args, **kwargs: None)
     monkeypatch.setattr(mod, "_emit_elapsed", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod.time, "strftime", lambda *_args, **_kwargs: "20260104_114516")
 
     exif_calls = []
     monkeypatch.setattr(
@@ -240,7 +246,7 @@ def test_generate_images_adds_prompt_description_when_requested(
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
 
-    expected = tmp_path / "schnell-1-abc123.png"
+    expected = tmp_path / "dreamy-forest-scene-20260104_114516.png"
     assert output == [expected]
     assert exif_calls == [
         (
@@ -253,6 +259,7 @@ def test_generate_images_adds_prompt_description_when_requested(
 def test_generate_images_skips_preview_when_disabled(
     monkeypatch, tmp_path, reload_imagegen
 ):
+    # REVIEW: 2026-01-04 editor upgrade
     def run(endpoint, *, arguments):
         return {
             "request_id": "skip-req",
@@ -269,6 +276,7 @@ def test_generate_images_skips_preview_when_disabled(
     monkeypatch.setattr(mod, "_handle_post_write", lambda path: opened.append(path))
     monkeypatch.setattr(mod, "_emit_request_info", lambda *args, **kwargs: None)
     monkeypatch.setattr(mod, "_emit_elapsed", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod.time, "strftime", lambda *_args, **_kwargs: "20260104_114516")
     monkeypatch.setattr(
         mod.exif,
         "set_exif_data",
@@ -286,12 +294,13 @@ def test_generate_images_skips_preview_when_disabled(
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
 
-    expected = tmp_path / "skip-1-skip-req.png"
+    expected = tmp_path / "skip-skip-20260104_114516.png"
     assert output == [expected]
     assert opened == []
 
 
 def test_generate_images_converts_png_to_jpg(monkeypatch, tmp_path, reload_imagegen):
+    # REVIEW: 2026-01-04 editor upgrade
     def run(endpoint, *, arguments):
         return {
             "request_id": "conv-req",
@@ -311,6 +320,7 @@ def test_generate_images_converts_png_to_jpg(monkeypatch, tmp_path, reload_image
     monkeypatch.setattr(mod, "_handle_post_write", lambda path: None)
     monkeypatch.setattr(mod, "_emit_request_info", lambda *args, **kwargs: None)
     monkeypatch.setattr(mod, "_emit_elapsed", lambda *args, **kwargs: None)
+    monkeypatch.setattr(mod.time, "strftime", lambda *_args, **_kwargs: "20260104_114516")
     monkeypatch.setattr(
         mod.exif,
         "set_exif_data",
@@ -333,6 +343,6 @@ def test_generate_images_converts_png_to_jpg(monkeypatch, tmp_path, reload_image
 
     output = mod.generate_images(parsed, output_dir=tmp_path)
 
-    expected = tmp_path / "schnell-1-conv-req.jpg"
+    expected = tmp_path / "convert-20260104_114516.jpg"
     assert output == [expected]
     assert expected.read_bytes()[:2] == b"\xff\xd8"
