@@ -33,14 +33,13 @@ Set your fal.ai API key in the environment. The CLI auto-loads .env if python-do
 ```
 FAL_KEY=your_fal_api_key
 ```
-- 
 - Option B: export in your shell
 ```
 export FAL_KEY=your_fal_api_key
 ```
 
 
-### 3) Use the CLI
+### 3) Run imagegen (CLI)
 
 - List available models and general usage:
 ```
@@ -88,7 +87,9 @@ On MacOS, imagegen will auto-open images when their generation is completed.
 Pass `--no-preview` to suppress this behavior (useful in scripts or when running headless).
 
 
-## How prompts and files are resolved
+## imagegen (CLI)
+
+### How prompts and files are resolved
 - -p/--prompt supplies the text inline.
 - -f/--file looks under prompts/. You can pass either name or name.txt.
   - Example: -f cookie resolves to prompts/cookie.txt
@@ -97,7 +98,7 @@ Pass `--no-preview` to suppress this behavior (useful in scripts or when running
 Exactly one of -p or -f must be provided.
 
 
-## Image size and dimensions
+### Image size and dimensions
 - -i/--image-size picks a preset. Supported values include: square_hd, square, portrait_4_3, portrait_16_9, landscape_4_3, landscape_16_9.
 - Some models allow explicit -w/--width and -h/--height instead of -i.
   - If a model allows dimensions, you must provide both -w and -h, and you must not pass -i.
@@ -109,13 +110,13 @@ uv run imagegen <model-name> --help
 ```
 
 
-## Output
+### Output
 - Images are downloaded to assets/ with a model‑and‑index‑based filename.
 - The CLI prints the final file paths to stdout, one per line, and nothing else. This is intentional so that other tools can consume the output reliably.
 - On macOS the files auto-open after download unless `--no-preview` is supplied.
 
 
-## Troubleshooting
+### Troubleshooting
 - No models appear or calls fail: ensure FAL_KEY is set (env var or .env) and that your fal.ai account has access to the chosen model/workflow.
 - Prompt file not found: make sure the file exists under prompts/ and that you used the correct name (with or without .txt). For nested paths, include the slash (e.g., -f sub/idea.txt).
 - Width/height errors: only use -w and -h together, and only for models that support dimensions; otherwise, use -i.
@@ -124,23 +125,34 @@ uv run imagegen <model-name> --help
 - PNG outputs are saved as JPEG by default; use `--no-as-jpg` to keep PNGs, or `--jpg-options="quality=60,progressive=False"` to customize JPEG encoding.
 
 
-## Prompt editor (Flask UI)
+## imageedit (Flask UI)
 
-A companion Flask app, `imageedit`, lets you manage prompt files and trigger runs from the browser.
+A companion Flask app, `imageedit`, lets you manage prompt and style files and trigger runs from the browser. The UI is API-driven (AJAX) and mirrors the CLI registry so model options stay in sync.
 
-- Start it with `uv run flask --app imageedit.app run --debug` (or `dev` depending on your Flask version).
-- The UI lists prompts in `prompts/`, supports create/save/delete, adds a style prompt picker sourced from `styles/` that appends into the current prompt, and exposes the model selector plus the same key flags (`-a`, `-i`, `-u`) as the CLI. The backend lives in `src/imageedit` with templates in `src/imageedit/templates`.
-- When you click **Run**, the app persists your prompt, invokes the CLI pipeline with `--no-preview`, and shows links to the generated assets.
-- Keep this section in sync when adding registry options that need UI coverage so both CLI and Flask stay in lockstep.
+Features
+- Prompt CRUD backed by `prompts/` (save, duplicate, delete) with modal confirmations.
+- Style CRUD backed by `styles/`, plus quick insert into the prompt editor.
+- Model selection and preset size selector synced to the registry via `/api/model-sizes`.
+- Optional source image URLs (`-u`) with local file uploads sent to fal storage.
+- Asset gallery with EXIF-based prompt reload and quick delete.
+- Runs invoke the CLI pipeline with `--no-preview` and surface generated assets.
 
-For a ready-to-run command that binds to all interfaces (0.0.0.0) on port `5002`—handy on macOS where port 5000 is reserved—use the provided shell script:
-
+### Running the app
+- Start a local dev server:
+```
+uv run flask --app imageedit.app run --debug
+```
+- Or use the helper script (binds to 0.0.0.0:5002):
 ```
 ./start_flask.sh
 ```
 
-⚠️ This script exposes the unprotected dev server; anyone on your network could use it. Treat it as a convenient reference and adapt the command for hardened deployments if needed.
+### Environment and storage
+- imageedit uses the same `FAL_KEY` env var as the CLI because it calls the same fal.ai client.
+- Prompts are stored under `prompts/`, styles under `styles/`, and generated assets under `assets/`.
 
+### Security considerations
+This Flask app has no authentication or network security. It is intended for localhost use or trusted networks only. If you bind to 0.0.0.0 (including `./start_flask.sh`), anyone on the network can access it. Treat it as a development tool unless you add your own protections.
 
 ---
 
