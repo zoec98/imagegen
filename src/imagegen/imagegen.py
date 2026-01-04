@@ -337,13 +337,17 @@ def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
             arguments["loras"] = normalized_loras
 
         # ready to save the prompt in exif
+        desc_data = {
+            "model": parsed.model,
+            "endpoint": parsed.endpoint,
+            "call": parsed.call,
+            "arguments": arguments,
+        }
+        if parsed.extra_metadata:
+            desc_data.update(parsed.extra_metadata)
+
         description = json.dumps(
-            {
-                "model": parsed.model,
-                "endpoint": parsed.endpoint,
-                "call": parsed.call,
-                "arguments": arguments,
-            },
+            desc_data,
             ensure_ascii=False,
             separators=(",", ":"),
             sort_keys=True,

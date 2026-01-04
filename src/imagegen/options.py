@@ -28,6 +28,7 @@ Rules enforced:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import secrets
 from collections.abc import Mapping, Sequence
@@ -66,6 +67,7 @@ class ParsedOptions:
         add_prompt_metadata: Whether the CLI requested storing the prompt in EXIF.
         as_jpg: Whether to convert PNG responses into JPEG files.
         jpg_options: JPEG encoding options for PNG conversions.
+        extra_metadata: Additional metadata to store in EXIF (not passed to model).
     """
 
     model: str
@@ -78,6 +80,7 @@ class ParsedOptions:
     jpg_options: dict[str, Any] = field(
         default_factory=lambda: dict(_JPG_OPTION_DEFAULTS)
     )
+    extra_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def _prompt_from_file(path: Path) -> str:
@@ -383,6 +386,12 @@ def _add_common_options(parser: argparse.ArgumentParser) -> None:
             "comma-separated JPEG options (quality, subsampling, progressive, optimize)"
         ),
     )
+    parser.add_argument(
+        "--meta",
+        dest="meta",
+        default=None,
+        help="JSON string containing additional metadata to store in EXIF",
+    )
 
 
 def _build_common_parser() -> argparse.ArgumentParser:
@@ -562,6 +571,15 @@ def parse_args(
 
     jpg_options = _parse_jpg_options(getattr(ns, "jpg_options", None), model_parser)
 
+    # Parse extra metadata
+    extra_metadata = {}
+    meta_json = getattr(ns, "meta", None)
+    if meta_json:
+        try:
+            extra_metadata = json.loads(meta_json)
+        except json.JSONDecodeError as exc:
+            model_parser.error(f"invalid JSON in --meta: {exc}")
+
     return ParsedOptions(
         model=model_name,
         endpoint=model_def["endpoint"],
@@ -571,6 +589,7 @@ def parse_args(
         preview_assets=bool(getattr(ns, "preview_assets", True)),
         as_jpg=bool(getattr(ns, "as_jpg", True)),
         jpg_options=jpg_options,
+        extra_metadata=extra_metadata,
     )
 
 

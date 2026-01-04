@@ -183,9 +183,9 @@ def test_next_copy_name_increments_suffixes():
 
 def test_parse_exif_description_extracts_model_and_prompt():
     text = '{"arguments":{"prompt":"hello world"},"call":"run","endpoint":"x","model":"seedream"}'
-    model, prompt = _parse_exif_description(text)
-    assert model == "seedream"
-    assert prompt == "hello world"
+    result = _parse_exif_description(text)
+    assert result["model"] == "seedream"
+    assert result["prompt"] == "hello world"
 
 
 def test_normalize_exif_text_repairs_mojibake():

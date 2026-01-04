@@ -94,18 +94,26 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
                     asset_path.unlink()
                     status_message = f"Deleted asset '{asset_filename}'."
                 else:
-                    model, prompt = _extract_prompt_from_exif(asset_path)
-                    if not prompt:
+                    exif_data = _extract_prompt_from_exif(asset_path)
+                    if not exif_data.get("prompt"):
                         error_message = (
                             "No prompt metadata found in the selected asset."
                         )
                     else:
-                        prompt_text = prompt
+                        prompt_text = exif_data["prompt"]
                         selected_prompt = _prompt_name_from_asset_filename(
                             asset_filename
                         )
-                        if model and model in all_models:
-                            selected_model = model
+
+                        if exif_data.get("model") and exif_data["model"] in all_models:
+                            selected_model = exif_data["model"]
+
+                        if exif_data.get("style"):
+                            selected_style = exif_data["style"]
+
+                        if exif_data.get("prompt_name"):
+                            selected_prompt = exif_data["prompt_name"]
+
                         status_message = f"Loaded prompt from asset '{asset_filename}'."
             elif action == "append_style":
                 prompt_text = _append_style_prompt(
@@ -129,6 +137,7 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
                             include_prompt_metadata=include_prompt_metadata,
                             image_size=image_size_value,
                             image_urls=image_urls_text if supports_image_urls else "",
+                            style_name=selected_style,
                         )
                         if run_result["error"]:
                             error_message = run_result["error"]
@@ -381,6 +390,7 @@ def _run_generation(
     include_prompt_metadata: bool,
     image_size: str,
     image_urls: str,
+    style_name: str | None = None,
 ) -> dict[str, Any]:
     args: list[str] = [selected_model, "--no-preview", "-f", str(prompt_path)]
     if include_prompt_metadata:
@@ -389,6 +399,16 @@ def _run_generation(
         args.extend(["-i", image_size.strip()])
     for url in _split_multivalue_field(image_urls):
         args.extend(["-u", url])
+
+    # Add extra metadata for EXIF
+    meta = {
+        "prompt_name": prompt_name,
+        "style_name": style_name,
+    }
+    # Filter out empty values
+    meta = {k: v for k, v in meta.items() if v}
+    if meta:
+        args.extend(["--meta", json.dumps(meta)])
 
     try:
         parsed = parse_args(args)
@@ -556,7 +576,7 @@ def _prompt_name_from_asset_filename(filename: str) -> str:
     return _normalize_prompt_name(name)
 
 
-def _extract_prompt_from_exif(asset_path: Path) -> tuple[str | None, str | None]:
+def _extract_prompt_from_exif(asset_path: Path) -> dict[str, Any]:
     try:
         with Image.open(asset_path) as img:
             exif = img.getexif()
@@ -565,7 +585,7 @@ def _extract_prompt_from_exif(asset_path: Path) -> tuple[str | None, str | None]
 
     description = exif.get(piexif.ImageIFD.ImageDescription) if exif else None
     if not description:
-        return None, None
+        return {}
     if isinstance(description, bytes):
         text = description.decode("utf-8", errors="ignore")
     else:
@@ -573,37 +593,36 @@ def _extract_prompt_from_exif(asset_path: Path) -> tuple[str | None, str | None]
     return _parse_exif_description(_normalize_exif_text(text))
 
 
-def _parse_exif_description(text: str) -> tuple[str | None, str | None]:
+def _parse_exif_description(text: str) -> dict[str, Any]:
+    result: dict[str, Any] = {}
     trimmed = text.strip()
     if trimmed.startswith("{"):
         try:
             data = json.loads(trimmed)
+            if isinstance(data, dict):
+                result["model"] = data.get("model")
+                result["style"] = data.get("style_name")
+                result["prompt_name"] = data.get("prompt_name")
+                arguments = data.get("arguments", {})
+                if isinstance(arguments, dict):
+                    result["prompt"] = arguments.get("prompt")
+                return result
         except json.JSONDecodeError:
-            data = None
-        if isinstance(data, dict):
-            arguments = data.get("arguments", {})
-            if isinstance(arguments, dict):
-                prompt_value = arguments.get("prompt")
-            else:
-                prompt_value = None
-            model_value = data.get("model")
-            prompt_text = (
-                prompt_value.strip() if isinstance(prompt_value, str) else None
-            )
-            model_text = model_value.strip() if isinstance(model_value, str) else None
-            if prompt_text or model_text:
-                return model_text or None, prompt_text or None
+            pass
 
     prompt_index = text.find("Prompt:")
     if prompt_index == -1:
-        return None, None
+        return result
 
     prompt_text = text[prompt_index + len("Prompt:") :].strip()
     model_text = None
     model_index = text.find("Model:")
     if 0 <= model_index < prompt_index:
         model_text = text[model_index + len("Model:") : prompt_index].strip()
-    return model_text or None, prompt_text or None
+
+    result["prompt"] = prompt_text
+    result["model"] = model_text
+    return result
 
 
 def _normalize_exif_text(text: str) -> str:
