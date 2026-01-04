@@ -26,6 +26,22 @@ except ImportError:  # pragma: no cover
     fal_client = None  # type: ignore
 
 
+def _truncate_to_word_boundary(text: str, max_chars: int = 50) -> str:
+    """Truncate text to max_chars, rounding down to nearest complete word."""
+    if len(text) <= max_chars:
+        return text
+    
+    # Find the last space within the limit
+    truncated = text[:max_chars]
+    last_space = truncated.rfind(' ')
+    
+    if last_space > 0:
+        return truncated[:last_space]
+    
+    # If no space found, just truncate at max_chars
+    return truncated
+
+
 def generate_images(
         parsed: ParsedOptions, *, output_dir: Path | None = None
 ) -> list[Path]:
@@ -49,9 +65,9 @@ def generate_images(
     _emit_elapsed(elapsed)
 
     payload = _coerce_payload(invocation)
-    request_id = _extract_request_id(payload) or getattr(invocation, "request_id", None)
-    if not request_id:
-        request_id = secrets.token_hex(8)
+    
+    # Generate timestamp for filename (YYYYMMDD_HHMMSS)
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
 
     urls = _extract_urls(payload)
     if not urls:
@@ -61,9 +77,30 @@ def generate_images(
         output_dir = Path("assets")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    base_component = _base_name_from_params(arguments) or parsed.model
-    base_component = _sanitize_component(base_component)
-    request_component = _sanitize_component(request_id)
+    # Get prompt name from file parameter (if exists)
+    prompt_name = _base_name_from_params(arguments)
+    
+    # Get prompt text from parameters
+    prompt_text = arguments.get("prompt", "")
+    if isinstance(prompt_text, str):
+        prompt_text = prompt_text.strip()
+    else:
+        prompt_text = ""
+    
+    # Build base component based on what we have
+    if prompt_name:
+        # If we have a prompt name, use: prompt_name + truncated_prompt_text
+        sanitized_name = _sanitize_component(prompt_name)
+        sanitized_text = _sanitize_component(prompt_text)
+        truncated_text = _truncate_to_word_boundary(sanitized_text, max_chars=50)
+        base_component = f"{sanitized_name}-{truncated_text}" if truncated_text else sanitized_name
+    elif prompt_text:
+        # If no prompt name but we have prompt text, use truncated prompt text
+        sanitized_text = _sanitize_component(prompt_text)
+        base_component = _truncate_to_word_boundary(sanitized_text, max_chars=50)
+    else:
+        # Fallback to model name if we have nothing
+        base_component = _sanitize_component(parsed.model)
 
     written: list[Path] = []
     for index, url in enumerate(urls, start=1):
@@ -72,7 +109,7 @@ def generate_images(
         convert_to_jpg = parsed.as_jpg and suffix == ".png"
         if convert_to_jpg:
             suffix = ".jpg"
-        filename = f"{base_component}-{index}-{request_component}{suffix}"
+        filename = f"{base_component}-{timestamp}{suffix}"
         path = output_dir / filename
         if convert_to_jpg:
             _write_jpg(path, data, parsed.jpg_options)
@@ -284,4 +321,15 @@ def _write_jpg(path: Path, data: bytes, options: Mapping[str, Any]) -> None:
         img.save(path, format="JPEG", **dict(options))
 
 
-__all__ = ["generate_images"]
+def upload_image(path: Path) -> str:
+    """Upload a local file to fal storage and return the URL."""
+    client = _require_fal_client()
+    # verify path exists
+    if not path.exists():
+        raise FileNotFoundError(f"File not found: {path}")
+    
+    url = client.upload_file(str(path))
+    return url
+
+
+__all__ = ["generate_images", "upload_image"]

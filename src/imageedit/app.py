@@ -4,44 +4,28 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
-import os
 from pathlib import Path
 from typing import Any
 
 import piexif  # type: ignore[import-untyped]
 from PIL import Image
-from dotenv import load_dotenv
-from flask import Flask, render_template, request, send_from_directory
+import tempfile
+from werkzeug.utils import secure_filename
+from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from imagegen.imagegen import generate_images
+from imagegen.imagegen import generate_images, upload_image
 from imagegen.options import parse_args
 from imagegen.registry import MODEL_REGISTRY
-
-
-def _max_content_length_from_env(default: int) -> int:
-    raw_value = os.environ.get("MAX_CONTENT_LENGTH")
-    if not raw_value:
-        return default
-    try:
-        parsed = int(raw_value)
-    except ValueError:
-        return default
-    if parsed <= 0:
-        return default
-    return parsed
 
 
 def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     """Create and configure the Flask application."""
 
-    load_dotenv(Path(".env"))
-    max_content_length = _max_content_length_from_env(100 * 1024 * 1024)
     app = Flask(__name__)
     app.config.from_mapping(
         PROMPTS_DIR=Path("prompts"),
         ASSETS_DIR=Path("assets"),
         STYLES_DIR=Path("styles"),
-        MAX_CONTENT_LENGTH=max_content_length,
     )
     if config:
         app.config.update(config)
@@ -59,7 +43,11 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
         style_names = _list_prompt_names(styles_dir)
 
         selected_prompt = request.args.get("prompt", "").strip()
-        selected_style = request.form.get("style_name", "").strip()
+        selected_style = (
+            request.form.get("style_name_custom", "").strip()
+            or request.form.get("style_name_preset", "").strip()
+            or request.form.get("style_name", "").strip() 
+        )
         prompt_text = ""
         status_message: str | None = None
         error_message: str | None = None
@@ -88,7 +76,11 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
 
         if request.method == "POST":
             action = request.form.get("action", "")
-            raw_name = request.form.get("prompt_name", "")
+            raw_name = (
+                request.form.get("prompt_name_custom", "").strip()
+                or request.form.get("prompt_name_preset", "").strip()
+                or request.form.get("prompt_name", "").strip()
+            )
             selected_prompt = _normalize_prompt_name(raw_name)
             prompt_text = request.form.get("prompt_text", "")
 
@@ -124,74 +116,32 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
                 if selected_style:
                     status_message = f"Added style '{selected_style}'."
             else:
-                if not selected_prompt:
-                    error_message = "Prompt name is required."
-                else:
-                    prompt_path = _prompt_path(prompts_dir, selected_prompt)
-                    if action == "save":
-                        _write_prompt(prompt_path, prompt_text)
-                        status_message = f"Saved prompt '{selected_prompt}'."
-                        if selected_prompt not in prompt_names:
-                            prompt_names.append(selected_prompt)
-                            prompt_names.sort()
-                    elif action == "delete":
-                        if prompt_path.exists():
-                            prompt_path.unlink()
-                            status_message = f"Deleted prompt '{selected_prompt}'."
-                            prompt_names = _list_prompt_names(prompts_dir)
-                            selected_prompt = ""
-                            prompt_text = ""
-                        else:
-                            error_message = (
-                                f"Prompt '{selected_prompt}' does not exist."
-                            )
-                    elif action == "duplicate":
-                        if prompt_path.exists():
-                            prompt_text = prompt_path.read_text(encoding="utf-8")
-                            duplicate_name = _next_copy_name(selected_prompt)
-                            duplicate_path = _prompt_path(prompts_dir, duplicate_name)
-                            _write_prompt(duplicate_path, prompt_text)
-                            selected_prompt = duplicate_name
-                            status_message = (
-                                f"Duplicated prompt as '{selected_prompt}'."
-                            )
-                            if selected_prompt not in prompt_names:
-                                prompt_names.append(selected_prompt)
-                                prompt_names.sort()
-                        else:
-                            error_message = (
-                                f"Prompt '{selected_prompt}' does not exist."
-                            )
-                    elif action == "load":
-                        if prompt_path.exists():
-                            prompt_text = prompt_path.read_text(encoding="utf-8")
-                            status_message = f"Loaded prompt '{selected_prompt}'."
-                        else:
-                            prompt_text = ""
-                            error_message = f"Prompt '{selected_prompt}' does not exist."
-                    elif action == "run":
-                        if not selected_model:
-                            error_message = "A model must be selected before running."
-                        else:
-                            _write_prompt(prompt_path, prompt_text)
-                            run_result = _run_generation(
-                                selected_model=selected_model,
-                                prompt_name=selected_prompt,
-                                prompt_path=prompt_path,
-                                include_prompt_metadata=include_prompt_metadata,
-                                image_size=image_size_value,
-                                image_urls=image_urls_text if supports_image_urls else "",
-                            )
-                            if run_result["error"]:
-                                error_message = run_result["error"]
-                            else:
-                                generated_paths = run_result["paths"]
-                                asset_entries = _build_asset_entries(
-                                    generated_paths, Path(app.config["ASSETS_DIR"])
-                                )
-                                status_message = run_result["message"]
+                # No other actions needed - prompts are managed via API endpoints
+                if action == "run":
+                    if not selected_model:
+                        error_message = "A model must be selected before running."
                     else:
-                        error_message = "Unknown action."
+                        # Define prompt_path for the run action
+                        prompt_path = _prompt_path(prompts_dir, selected_prompt)
+                        _write_prompt(prompt_path, prompt_text)
+                        run_result = _run_generation(
+                            selected_model=selected_model,
+                            prompt_name=selected_prompt,
+                            prompt_path=prompt_path,
+                            include_prompt_metadata=include_prompt_metadata,
+                            image_size=image_size_value,
+                            image_urls=image_urls_text if supports_image_urls else "",
+                        )
+                        if run_result["error"]:
+                            error_message = run_result["error"]
+                        else:
+                            generated_paths = run_result["paths"]
+                            asset_entries = _build_asset_entries(
+                                generated_paths, Path(app.config["ASSETS_DIR"])
+                            )
+                            status_message = run_result["message"]
+                else:
+                    error_message = "Unknown action."
 
         if request.method == "GET" and selected_prompt:
             prompt_path = _prompt_path(prompts_dir, selected_prompt)
@@ -242,53 +192,188 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     def api_upload():
         """Handle local image upload to fal cloud."""
         import tempfile
-
-        allowed_mime_types = {"image/jpeg", "image/png", "image/webp"}
+        
         if "file" not in request.files:
             return {"error": "No file provided"}, 400
-
+        
         file = request.files["file"]
         if file.filename == "":
             return {"error": "No file selected"}, 400
-        if file.mimetype not in allowed_mime_types:
-            return {"error": "Unsupported file type"}, 400
-
-        temp_path: Path | None = None
+        
         try:
             # Save to temp file and upload
-            with tempfile.NamedTemporaryFile(
-                delete=False, suffix=Path(file.filename).suffix
-            ) as temp:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as temp:
                 temp_path = Path(temp.name)
                 file.save(temp_path)
-            try:
-                with Image.open(temp_path) as img:
-                    img.verify()
-            except Exception:
-                return {"error": "Invalid image file"}, 400
-            url = upload_image(temp_path)
+                try:
+                    url = upload_image(temp_path)
+                finally:
+                    temp_path.unlink()  # Clean up temp file
+                
             return {"url": url}
         except Exception as e:
             return {"error": str(e)}, 500
-        finally:
-            if temp_path is not None:
-                temp_path.unlink(missing_ok=True)
+
+    @app.route("/api/model-sizes/<model>")
+    def api_model_sizes(model: str):
+        """Return allowed sizes for a given model as JSON."""
+        sizes = _get_allowed_sizes(model)
+        default = _default_option(model, "image_size")
+        supports_urls = _model_supports_image_urls(model)
+        return jsonify({"sizes": sizes, "default": default, "supports_image_urls": supports_urls})
+
+
+
+
+    @app.route("/api/prompt/<name>")
+    def api_get_prompt(name: str):
+        """Return prompt text for a given prompt name."""
+        prompts_dir = Path(app.config["PROMPTS_DIR"])
+        prompt_path = _prompt_path(prompts_dir, name)
+        if prompt_path.exists():
+            text = prompt_path.read_text(encoding="utf-8")
+            return jsonify({"text": text})
+        return jsonify({"text": ""}), 404
+
+    @app.route("/api/style/<name>")
+    def api_get_style(name: str):
+        """Return style text for a given style name."""
+        styles_dir = Path(app.config["STYLES_DIR"])
+        style_path = _prompt_path(styles_dir, name)  # Reuse _prompt_path logic
+        if style_path.exists():
+            text = style_path.read_text(encoding="utf-8")
+            return jsonify({"text": text})
+        return jsonify({"text": ""}), 404
+
+    @app.route("/api/save-style", methods=["POST"])
+    def api_save_style():
+        """Save a new style, handling naming collisions."""
+        data = request.json
+        if not data or "name" not in data or "text" not in data:
+            return jsonify({"error": "Missing name or text"}), 400
+        
+        name = data["name"].strip()
+        text = data["text"]
+        if not name:
+            return jsonify({"error": "Style name cannot be empty"}), 400
+
+        styles_dir = Path(app.config["STYLES_DIR"])
+        styles_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Determine unique name
+        sanitized = _normalize_prompt_name(name)
+        base_name = sanitized
+        counter = 0
+        while True:
+            candidate_name = base_name if counter == 0 else f"{base_name}_{counter}"
+            style_path = styles_dir / f"{candidate_name}.txt"
+            if not style_path.exists():
+                break
+            counter += 1
+        
+        try:
+            _write_prompt(style_path, text)
+            return jsonify({"success": True, "saved_name": candidate_name})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+
+    @app.route("/api/delete-style", methods=["POST"])
+    def api_delete_style():
+        """Delete an existing style."""
+        data = request.json
+        if not data or "name" not in data:
+            return jsonify({"error": "Missing name"}), 400
+        
+        name = data["name"].strip()
+        if not name:
+            return jsonify({"error": "Style name cannot be empty"}), 400
+
+        styles_dir = Path(app.config["STYLES_DIR"])
+        style_path = _prompt_path(styles_dir, name)
+        
+        if not style_path.exists():
+             return jsonify({"error": f"Style '{name}' not found"}), 404
+        
+        try:
+            style_path.unlink()
+            return jsonify({"success": True, "deleted_name": name})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/save-prompt", methods=["POST"])
+    def api_save_prompt():
+        """Save a prompt text with a given name."""
+        data = request.json
+        if not data or "name" not in data or "text" not in data:
+            return jsonify({"error": "Missing name or text"}), 400
+        
+        name = data["name"].strip()
+        text = data["text"]
+        if not name:
+            return jsonify({"error": "Prompt name cannot be empty"}), 400
+
+        prompts_dir = Path(app.config["PROMPTS_DIR"])
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        
+        sanitized = _normalize_prompt_name(name)
+        prompt_path = prompts_dir / f"{sanitized}.txt"
+        
+        try:
+            _write_prompt(prompt_path, text)
+            return jsonify({"success": True, "saved_name": sanitized})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/delete-prompt", methods=["POST"])
+    def api_delete_prompt():
+        """Delete an existing prompt."""
+        data = request.json
+        if not data or "name" not in data:
+            return jsonify({"error": "Missing name"}), 400
+        
+        name = data["name"].strip()
+        if not name:
+            return jsonify({"error": "Prompt name cannot be empty"}), 400
+
+        prompts_dir = Path(app.config["PROMPTS_DIR"])
+        prompt_path = _prompt_path(prompts_dir, name)
+        
+        if not prompt_path.exists():
+             return jsonify({"error": f"Prompt '{name}' not found"}), 404
+        
+        try:
+            prompt_path.unlink()
+            return jsonify({"success": True, "deleted_name": name})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/duplicate-prompt", methods=["POST"])
+    def api_duplicate_prompt():
+        """Duplicate an existing prompt with an incremented name."""
+        data = request.json
+        if not data or "name" not in data or "text" not in data:
+            return jsonify({"error": "Missing name or text"}), 400
+        
+        name = data["name"].strip()
+        text = data["text"]
+        if not name:
+            return jsonify({"error": "Prompt name cannot be empty"}), 400
+
+        prompts_dir = Path(app.config["PROMPTS_DIR"])
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Generate new name using existing logic
+        duplicate_name = _next_copy_name(name)
+        duplicate_path = _prompt_path(prompts_dir, duplicate_name)
+        
+        try:
+            _write_prompt(duplicate_path, text)
+            return jsonify({"success": True, "duplicated_name": duplicate_name})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return app
-
-
-def upload_image(path: Path) -> str:
-    """Upload a local file to fal storage and return the URL."""
-    if not path.exists():
-        raise FileNotFoundError(f"File not found: {path}")
-    try:
-        import fal_client as imported  # type: ignore
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError(
-            "fal_client is required to upload images. "
-            "Install the fal SDK and ensure it is importable."
-        ) from exc
-    return imported.upload_file(str(path))
 
 
 def _run_generation(
@@ -504,6 +589,9 @@ def _parse_exif_description(text: str) -> tuple[str | None, str | None]:
     return model_text or None, prompt_text or None
 
 
+
+
+
 def _normalize_exif_text(text: str) -> str:
     try:
         return text.encode("latin-1").decode("utf-8")
@@ -573,14 +661,11 @@ def _parse_gallery_width(raw_value: str | None) -> int:
 
 
 def _parse_gallery_height(raw_value: str | None) -> int:
-    allowed = {value for value in range(5, 105, 5)}
     try:
-        value = int(raw_value) if raw_value is not None else 5
+        value = int(raw_value) if raw_value is not None else 100
     except ValueError:
-        value = 5
-    if value not in allowed:
-        return 5
-    return value
+        value = 100
+    return max(1, value)
 
 
 app = create_app()
