@@ -54,12 +54,15 @@ function initStyleControls() {
             const textToInsert = styleTextarea.value.trim();
             if (!textToInsert) return;
 
-            const currentPrompt = promptTextarea.value;
-            if (currentPrompt) {
-                promptTextarea.value = textToInsert + '\n' + currentPrompt;
-            } else {
-                promptTextarea.value = textToInsert;
-            }
+            const styleName = styleSelect.value.trim() || 'custom';
+            const lines = promptTextarea.value.split(/\r?\n/);
+            const styleIndex = lines.findIndex(line => line.startsWith('Style:'));
+            const base = (styleIndex >= 0 ? lines.slice(0, styleIndex) : lines)
+                .join('\n')
+                .trimEnd();
+            const styleBlock = `Style: ${styleName}\n${textToInsert}`;
+
+            promptTextarea.value = base ? `${base}\n${styleBlock}` : styleBlock;
         });
     }
 
