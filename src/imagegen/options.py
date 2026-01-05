@@ -34,7 +34,7 @@ import secrets
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 from dotenv import load_dotenv
 
@@ -291,6 +291,29 @@ def _split_option_values(raw_values: Sequence[str]) -> list[str]:
     return values
 
 
+# This exists mostly to shut up mypy.
+# We have different return types depending on "return_wth_weights".
+#
+@overload
+def _normalize_external_resources(
+    raw_values: Sequence[str],
+    *,
+    base_url: str,
+    default_suffix: str,
+    return_with_weights: Literal[True],
+) -> list[tuple[str, float]]: ...
+
+
+@overload
+def _normalize_external_resources(
+    raw_values: Sequence[str],
+    *,
+    base_url: str,
+    default_suffix: str,
+    return_with_weights: Literal[False] = False,
+) -> list[str]: ...
+
+
 def _normalize_external_resources(
     raw_values: Sequence[str],
     *,
@@ -299,37 +322,48 @@ def _normalize_external_resources(
     return_with_weights: bool = False,
 ) -> list[str] | list[tuple[str, float]]:
     base = base_url.rstrip("/") + "/"
-    normalized: list[str] | list[tuple[str, float]] = []
-    for item in _split_option_values(raw_values):
-        value = item
-        weight = 1.0
-        if return_with_weights and ";" in value:
-            maybe_path, maybe_weight = value.rsplit(";", 1)
-            try:
-                weight = float(maybe_weight)
-                value = maybe_path
-            except ValueError:
-                value = item
-                weight = 1.0
-        if "://" in value:
-            final_value = value
-        else:
-            name = value
-            if "." not in name:
-                name = f"{name}{default_suffix}"
-            final_value = f"{base}{name}"
-        if return_with_weights:
+    if return_with_weights:
+        normalized: list[tuple[str, float]] = []
+        for item in _split_option_values(raw_values):
+            value = item
+            weight = 1.0
+            if ";" in value:
+                maybe_path, maybe_weight = value.rsplit(";", 1)
+                try:
+                    weight = float(maybe_weight)
+                    value = maybe_path
+                except ValueError:
+                    value = item
+                    weight = 1.0
+            if "://" in value:
+                final_value = value
+            else:
+                name = value
+                if "." not in name:
+                    name = f"{name}{default_suffix}"
+                final_value = f"{base}{name}"
             normalized.append((final_value, weight))
-        else:
-            normalized.append(final_value)
-    return normalized
+        return normalized
+    else:
+        normalized_: list[str] = []
+        for item in _split_option_values(raw_values):
+            value = item
+            if "://" in value:
+                final_value = value
+            else:
+                name = value
+                if "." not in name:
+                    name = f"{name}{default_suffix}"
+                final_value = f"{base}{name}"
+            normalized_.append(final_value)
+        return normalized_
 
 
 def get_safetensors_url() -> str:
     return os.environ.get("SAFETENSORS_URL", "https://example.com/j/")
 
 
-def get_source_image_url():
+def get_source_image_url() -> str:
     return os.environ.get("SOURCE_IMAGE_URL", "https://example.com/k/")
 
 

@@ -1,6 +1,8 @@
 # ------------------------------ Model registry ------------------------------
 
-MODEL_REGISTRY = {
+from typing import Any
+
+MODEL_REGISTRY: dict[str, dict[str, Any]] = {
     # Minimal, fast
     "schnell": {
         "endpoint": "fal-ai/flux/schnell",
