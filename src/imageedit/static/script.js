@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initModelSizeSync();
     initDualInputs();
     initPromptAutoLoad();
-    initImageUpload();
     initStyleControls();
     initImageSourceControls();
     initPromptControls();
@@ -583,8 +582,7 @@ function initThemeToggle() {
 function initAutoSubmit() {
     const autoSubmitInputs = [
         'gallery-width',
-        'gallery-height',
-        'model-name'
+        'gallery-height'
     ];
 
     autoSubmitInputs.forEach(id => {
@@ -766,63 +764,3 @@ function initPromptAutoLoad() {
     });
 }
 
-
-/**
- * Handles local image upload and URL insertion.
- */
-function initImageUpload() {
-    const uploadBtn = document.getElementById('upload-image-btn');
-    const fileInput = document.getElementById('local-image-upload');
-    const urlsTextarea = document.getElementById('image-urls');
-
-    if (!uploadBtn || !fileInput || !urlsTextarea) return;
-
-    uploadBtn.addEventListener('click', () => {
-        fileInput.click();
-    });
-
-    fileInput.addEventListener('change', async () => {
-        if (!fileInput.files || fileInput.files.length === 0) return;
-
-        const file = fileInput.files[0];
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // UI Feedback
-        const originalText = uploadBtn.textContent;
-        uploadBtn.textContent = 'Uploading...';
-        uploadBtn.disabled = true;
-
-        try {
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Upload failed');
-            }
-
-            const data = await response.json();
-            const url = data.url;
-
-            // Append URL to textarea
-            const currentVal = urlsTextarea.value.trim();
-            if (currentVal) {
-                urlsTextarea.value = currentVal + '\n' + url;
-            } else {
-                urlsTextarea.value = url;
-            }
-
-        } catch (err) {
-            console.error('Upload error:', err);
-            alert('Failed to upload image: ' + err.message);
-        } finally {
-            // Reset UI
-            uploadBtn.textContent = originalText;
-            uploadBtn.disabled = false;
-            fileInput.value = ''; // Allow re-uploading same file
-        }
-    });
-}
