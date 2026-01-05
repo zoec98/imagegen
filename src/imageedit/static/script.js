@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initPromptAutoLoad();
     initImageUpload();
     initStyleControls();
+    initImageSourceControls();
     initPromptControls();
 });
 
@@ -430,6 +431,105 @@ function initPromptControls() {
             }
         });
     }
+}
+
+function initImageSourceControls() {
+    const toggleBtn = document.getElementById('toggle-image-preview');
+    const inputContainer = document.getElementById('image-url-input-container');
+    const previewContainer = document.getElementById('image-preview-container');
+    const textarea = document.getElementById('image-urls');
+    const uploadBtn = document.getElementById('upload-image-btn');
+    const fileInput = document.getElementById('local-image-upload');
+
+    if (!toggleBtn || !inputContainer || !previewContainer || !textarea) return;
+
+    // Toggle Preview Mode
+    toggleBtn.addEventListener('change', () => {
+        if (toggleBtn.checked) {
+            inputContainer.style.display = 'none';
+            previewContainer.style.display = 'grid';
+            renderImagePreviews(textarea.value, previewContainer);
+        } else {
+            inputContainer.style.display = 'block';
+            previewContainer.style.display = 'none';
+        }
+    });
+
+    // Upload Logic (Updated)
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                uploadBtn.textContent = 'Uploading...';
+                uploadBtn.disabled = true;
+
+                const response = await fetch('/api/upload-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const newUrl = data.url;
+
+                    // Append to textarea
+                    const currentText = textarea.value.trim();
+                    textarea.value = currentText ? `${currentText}\n${newUrl}` : newUrl;
+
+                    // If in preview mode, refresh previews
+                    if (toggleBtn.checked) {
+                        renderImagePreviews(textarea.value, previewContainer);
+                    }
+                } else {
+                    const err = await response.json();
+                    alert('Upload failed: ' + (err.error || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                alert('An error occurred during upload.');
+            } finally {
+                uploadBtn.textContent = 'Upload Local Image';
+                uploadBtn.disabled = false;
+                fileInput.value = ''; // Reset
+            }
+        });
+    }
+}
+
+function renderImagePreviews(text, container) {
+    container.innerHTML = '';
+    const urls = text.split(/[\n,]+/).map(u => u.trim()).filter(u => u);
+
+    if (urls.length === 0) {
+        container.innerHTML = '<div style="grid-column: 1/-1; padding: 1rem; text-align: center; color: var(--text-secondary); font-size: 0.9rem;">No images added yet. Upload or switch to edit mode to paste URLs.</div>';
+        return;
+    }
+
+    urls.forEach(url => {
+        const item = document.createElement('div');
+        item.className = 'image-preview-item';
+
+        const img = document.createElement('img');
+        img.src = url;
+        img.title = url;
+
+        img.onerror = () => {
+            item.innerHTML = `
+                <div class="image-preview-error">
+                    <span>Broken Link<br>${url.substring(0, 20)}...</span>
+                </div>
+            `;
+        };
+
+        item.appendChild(img);
+        container.appendChild(item);
+    });
 }
 
 

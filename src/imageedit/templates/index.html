@@ -90,13 +90,24 @@
 
         <div class="control-group" id="image-urls-group" {% if not supports_image_urls %}style="display:none;" {% endif
           %}>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
-            <label for="image-urls" style="margin-bottom:0;">Source Image URLs</label>
-            <button type="button" id="upload-image-btn" class="secondary"
-              style="font-size:0.8rem; padding: 2px 8px;">Upload Local Image</button>
+          <div style="margin-bottom: 5px;">
+            <label for="image-urls" style="margin-bottom:0.25rem; display:block;">Source Image URLs</label>
+            <div class="image-url-controls">
+              <button type="button" id="upload-image-btn" class="secondary">Upload Local Image</button>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-image-preview">
+                <span class="slider round"></span>
+                <span class="label-text">Preview</span>
+              </label>
+            </div>
           </div>
-          <textarea id="image-urls" name="image_urls" rows="3"
-            placeholder="https://...">{{ image_urls_text }}</textarea>
+          <div id="image-url-input-container">
+            <textarea id="image-urls" name="image_urls" rows="3" placeholder="https://..."
+              spellcheck="false">{{ image_urls_text }}</textarea>
+          </div>
+          <div id="image-preview-container" class="image-preview-grid" style="display:none;">
+            <!-- Previews will be injected here -->
+          </div>
           <input type="file" id="local-image-upload" accept="image/*" style="display:none;">
         </div>
 
