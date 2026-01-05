@@ -952,6 +952,14 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "help": "number of images to generate",
                 "flags": ["-#", "--num-images"],
             },
+            "image_urls": {
+                "type": str,
+                "default": None,
+                "help": "image URL input (repeatable)",
+                "flags": ["--image-url", "--image-urls", "-u"],
+                "action": "append",
+                "metavar": "URL",
+            },
             "enable_safety_checker": {
                 "type": bool,
                 "default": False,
@@ -974,13 +982,6 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "type": str,
                 "default": "none",
                 "help": "acceleration preset (none, regular, high)",
-            },
-            "image_url": {
-                "type": str,
-                "default": None,
-                "help": "source image URL",
-                "flags": ["--image-url", "-u"],
-                "metavar": "URL",
             },
             "strength": {
                 "type": float,
