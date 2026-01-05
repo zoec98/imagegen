@@ -677,6 +677,21 @@ input:checked+.slider:before {
 
 .delete-btn:hover {
     background: rgba(220, 53, 69, 0.9);
+
     /* Red danger color */
     transform: scale(1.1);
+}
+
+/* Usage Link */
+.usage-link {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-left: 0.5rem;
+    text-decoration: none;
+    font-weight: normal;
+}
+
+.usage-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
 }
