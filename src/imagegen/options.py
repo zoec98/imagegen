@@ -157,9 +157,9 @@ def _parse_image_size(
         raise argparse.ArgumentTypeError("image size must not be empty")
 
     lowered = candidate.lower()
-    normalized_allowed = {size.lower() for size in allowed_sizes}
-    if normalized_allowed and lowered in normalized_allowed:
-        return lowered
+    canonical_map = {size.lower(): size for size in allowed_sizes}
+    if canonical_map and lowered in canonical_map:
+        return canonical_map[lowered]
 
     if allow_dimensions:
         parts = lowered.split("x")
