@@ -461,3 +461,40 @@ def test_seed_default_is_random(monkeypatch):
         ["schnell", "-p", "hello", "-s", "99"], registry=MODEL_REGISTRY, parser=parser
     )
     assert ns_with_value.params["seed"] == 99
+
+
+def test_image_size_canonicalization():
+    """Ensures image size inputs are mapped to their canonical case from the registry.
+
+    Why: Some models require specific casing (e.g., 'auto_2K') but users or UIs
+    might provide lowercase. The parser should normalize this transparency.
+    """
+    reg = {
+        "test_model": {
+            "endpoint": "foo",
+            "call": "run",
+            "doc_url": "https://example.com",
+            "options": {
+                "image_size": {
+                    "type": "whi",
+                    "default": "square",
+                    "allowed_sizes": ["square", "auto_2K", "LANDSCAPE"],
+                    "flags": ["-i"],
+                }
+            },
+        }
+    }
+    parser = build_parser(reg)
+
+    def parse_size(val):
+        ns = parse_args(["test_model", "-i", val], registry=reg, parser=parser)
+        return ns.params.get("image_size")
+
+    # Test exact match
+    assert parse_size("auto_2K") == "auto_2K"
+    # Test lowercase input -> canonical output
+    assert parse_size("auto_2k") == "auto_2K"
+    assert parse_size("landscape") == "LANDSCAPE"
+    # Test standard lowercase
+    assert parse_size("square") == "square"
+    assert parse_size("SQUARE") == "square"
