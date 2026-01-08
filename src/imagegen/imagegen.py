@@ -118,6 +118,7 @@ def generate_images(
         else:
             path.write_bytes(data)
         _apply_exif_metadata(path, parsed)
+        _save_clean_copy(path, output_dir)
         if parsed.preview_assets:
             _handle_post_write(path)
         written.append(path)
@@ -302,6 +303,7 @@ def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
         # We don't want to leak image server URLs
         source_base = get_source_image_url()
         safetensors_base = get_safetensors_url()
+
         for key in ("image_url", "image_urls"):
             value = arguments.get(key)
             if isinstance(value, str):
@@ -315,6 +317,8 @@ def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
                     else:
                         shortened.append(entry)
                 arguments[key] = shortened
+
+
         # Also don't leak SAFETENSOR URLs
         loras_value = arguments.get("loras")
         if isinstance(loras_value, list):
@@ -383,6 +387,32 @@ def upload_image(path: Path) -> str:
 
     url = client.upload_file(str(path))
     return url
+
+
+def _save_clean_copy(source_path: Path, output_dir: Path) -> None:
+    """Save a copy of the image to a sibling 'clean' directory with no EXIF."""
+    try:
+        if output_dir.name == "":
+            # Handle edge case where output_dir might be just a name like 'assets' without full path logic sometimes?
+            # Path('assets').name is 'assets'. Path('.').name is ''. 
+            # If output_dir is '.', name is empty.
+            clean_dir_name = "clean_images"
+            if output_dir.as_posix() != ".":
+                 clean_dir_name = f"{output_dir.as_posix()}_clean"
+            clean_dir = output_dir.parent / clean_dir_name
+        else:
+            clean_dir = output_dir.parent / f"{output_dir.name}_clean"
+        
+        clean_dir.mkdir(parents=True, exist_ok=True)
+        target_path = clean_dir / source_path.name
+
+        with Image.open(source_path) as img:
+            # Create a new image to ensure no metadata carries over
+            clean_img = Image.frombytes(img.mode, img.size, img.tobytes())
+            clean_img.save(target_path)
+    except Exception as e:
+        # Don't fail the main generation if clean copy fails
+        print(f"Warning: failed to save clean copy: {e}", file=sys.stderr)
 
 
 __all__ = ["generate_images", "upload_image"]
