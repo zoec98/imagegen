@@ -20,3 +20,5 @@ __pycache__/
 /.junie
 /.idea
 .DS_Store
+
+/assets_clean/
