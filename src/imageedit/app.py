@@ -13,7 +13,7 @@ import piexif  # type: ignore[import-untyped]
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from PIL import Image
 
-from imagegen.imagegen import generate_images, upload_image
+from imagegen.imagegen import generate_images, save_clean_copy_enabled, upload_image
 from imagegen.options import parse_args
 from imagegen.registry import MODEL_REGISTRY
 
@@ -92,15 +92,16 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
                     error_message = "Asset file not found."
                 elif action == "asset_delete":
                     asset_path.unlink()
-                    
-                    # Also delete from assets_clean if it exists
-                    try:
-                        clean_dir = assets_dir.parent / f"{assets_dir.name}_clean"
-                        clean_path = clean_dir / asset_path.name
-                        if clean_path.exists():
-                            clean_path.unlink()
-                    except Exception as e:
-                        print(f"Warning: failed to delete clean asset: {e}")
+
+                    if save_clean_copy_enabled():
+                        # Also delete from assets_clean if it exists
+                        try:
+                            clean_dir = assets_dir.parent / f"{assets_dir.name}_clean"
+                            clean_path = clean_dir / asset_path.name
+                            if clean_path.exists():
+                                clean_path.unlink()
+                        except Exception as e:
+                            print(f"Warning: failed to delete clean asset: {e}")
 
                     status_message = f"Deleted asset '{asset_filename}'."
                 else:

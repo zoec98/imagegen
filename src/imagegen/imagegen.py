@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -391,6 +392,8 @@ def upload_image(path: Path) -> str:
 
 def _save_clean_copy(source_path: Path, output_dir: Path) -> None:
     """Save a copy of the image to a sibling 'clean' directory with no EXIF."""
+    if not save_clean_copy_enabled():
+        return
     try:
         if output_dir.name == "":
             # Handle edge case where output_dir might be just a name like 'assets' without full path logic sometimes?
@@ -415,4 +418,24 @@ def _save_clean_copy(source_path: Path, output_dir: Path) -> None:
         print(f"Warning: failed to save clean copy: {e}", file=sys.stderr)
 
 
-__all__ = ["generate_images", "upload_image"]
+def save_clean_copy_enabled() -> bool:
+    value = os.getenv("SAVE_CLEAN_COPY", "")
+    if not value.strip():
+        return False
+    return _as_boolean(value, "SAVE_CLEAN_COPY")
+
+
+def _as_boolean(value: str, key: str | None) -> bool:
+    if not key:
+        key = "key"
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(
+        f"value {value} for {key} must be one of 1, 0, true, false, yes, no, on, off"
+    )
+
+
+__all__ = ["generate_images", "upload_image", "save_clean_copy_enabled"]

@@ -11,3 +11,7 @@ SOURCE_IMAGE_URL="https://example.com/images_for_edit"
 
 # imageedit uses this as the max allowed file upload length (100 MB)
 MAX_CONTENT_LENGTH=104857600
+
+# Create a second copy of the image in assets_cleans sans exif data
+# This prevents prompts from leaking, which could expose URLs et al.
+SAVE_CLEAN_COPY=on
