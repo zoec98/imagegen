@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initStyleControls();
     initImageSourceControls();
     initPromptControls();
+    initShortcuts();
 });
 
 /**
@@ -224,6 +225,7 @@ function initStyleControls() {
 function initPromptControls() {
     const promptInput = document.getElementById('prompt-name-preset');
     const promptTextarea = document.getElementById('prompt-text');
+    const loadPromptBtn = document.getElementById('load-prompt-btn');
     const savePromptBtn = document.getElementById('save-prompt-btn');
     const deletePromptBtn = document.getElementById('delete-prompt-btn');
 
@@ -256,13 +258,13 @@ function initPromptControls() {
         }
     };
 
-    // 1. Fetch content on selection
-    promptInput.addEventListener('change', async () => {
-        await loadPrompt(promptInput.value);
-    });
-    promptInput.addEventListener('input', async () => {
-        await loadPrompt(promptInput.value);
-    });
+    // 1. Load Prompt Button
+    if (loadPromptBtn) {
+        loadPromptBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await loadPrompt(promptInput.value);
+        });
+    }
 
     // 2. Save Prompt Button
     if (savePromptBtn) {
@@ -447,6 +449,87 @@ function initPromptControls() {
             }
         });
     }
+}
+
+function initShortcuts() {
+    const modal = document.getElementById('shortcuts-modal');
+    const closeBtn = document.getElementById('close-shortcuts-btn');
+    const loadBtn = document.getElementById('load-prompt-btn');
+    const saveBtn = document.getElementById('save-prompt-btn');
+    const duplicateBtn = document.getElementById('duplicate-prompt-btn');
+    const generateBtn = document.querySelector('button[name="action"][value="run"]');
+    const modelSelect = document.getElementById('model-name');
+    const sizeSelect = document.getElementById('image-size-preset');
+    const styleSelect = document.getElementById('style-name-preset');
+    const insertStyleBtn = document.getElementById('insert-style-btn');
+
+    if (!modal) return;
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+    };
+
+    const openModal = () => {
+        modal.classList.add('active');
+    };
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        const key = e.key;
+        const active = document.activeElement;
+        const tag = active?.tagName?.toLowerCase();
+        const isTyping = tag === 'input' || tag === 'textarea' || tag === 'select' || active?.isContentEditable;
+
+        if (key === '?' || (key === '/' && e.shiftKey)) {
+            if (modal.classList.contains('active')) {
+                closeModal();
+            } else {
+                openModal();
+            }
+            e.preventDefault();
+            return;
+        }
+
+        if (key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+            return;
+        }
+
+        if (isTyping) return;
+
+        if (key === 'l') {
+            if (loadBtn) loadBtn.click();
+            e.preventDefault();
+        } else if (key === 's') {
+            if (saveBtn) saveBtn.click();
+            e.preventDefault();
+        } else if (key === 'd') {
+            if (duplicateBtn) duplicateBtn.click();
+            e.preventDefault();
+        } else if (key === 'g') {
+            if (generateBtn) generateBtn.click();
+            e.preventDefault();
+        } else if (key === 'm') {
+            if (modelSelect) modelSelect.focus();
+            e.preventDefault();
+        } else if (key === 'D') {
+            if (sizeSelect) sizeSelect.focus();
+            e.preventDefault();
+        } else if (key === 'S') {
+            if (styleSelect) styleSelect.focus();
+            e.preventDefault();
+        } else if (key === 'I') {
+            if (insertStyleBtn) insertStyleBtn.click();
+            e.preventDefault();
+        }
+    });
 }
 
 function initImageSourceControls() {

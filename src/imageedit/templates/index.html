@@ -41,8 +41,11 @@
             <option value="{{ prompt }}"></option>
             {% endfor %}
           </datalist>
-          <button type="button" id="duplicate-prompt-btn" class="secondary"
-            style="font-size:0.8rem; margin-top:2px;">Duplicate</button>
+          <div class="button-row" style="margin-top: 2px;">
+            <button type="button" id="load-prompt-btn" class="secondary" style="font-size:0.8rem;">Load Prompt</button>
+            <button type="button" id="duplicate-prompt-btn" class="secondary"
+              style="font-size:0.8rem;">Duplicate</button>
+          </div>
           <div class="button-row" style="margin-top: 5px;">
             <button type="button" id="save-prompt-btn" class="secondary" style="font-size:0.8rem;">Save
               Prompt</button>
@@ -238,6 +241,30 @@
         <div class="modal-footer">
           <button type="button" id="cancel-style-btn" class="secondary">Cancel</button>
           <button type="button" id="confirm-save-style-btn" class="primary">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" class="modal-overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>Keyboard Shortcuts</h3>
+        </div>
+        <div class="modal-body">
+          <p>Press Esc or ? to close.</p>
+          <p><strong>?</strong> Open shortcuts</p>
+          <p><strong>l</strong> Load prompt</p>
+          <p><strong>s</strong> Save prompt</p>
+          <p><strong>d</strong> Duplicate prompt</p>
+          <p><strong>g</strong> Generate image</p>
+          <p><strong>m</strong> Focus model selector</p>
+          <p><strong>D</strong> Focus dimensions selector</p>
+          <p><strong>S</strong> Focus style selector</p>
+          <p><strong>I</strong> Insert style to prompt</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="close-shortcuts-btn" class="secondary">Close</button>
         </div>
       </div>
     </div>
