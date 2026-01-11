@@ -272,10 +272,20 @@ function initPromptControls() {
         const confirmBtn = document.getElementById('confirm-save-prompt-btn');
         const cancelBtn = document.getElementById('cancel-prompt-btn');
         const nameInput = document.getElementById('new-prompt-name');
+        const messageContainer = document.querySelector('.messages');
 
         const closeModal = () => {
             modal.classList.remove('active');
             nameInput.value = '';
+        };
+
+        const showMessage = (type, text) => {
+            if (!messageContainer) return;
+            messageContainer.innerHTML = '';
+            const message = document.createElement('p');
+            message.className = type;
+            message.textContent = text;
+            messageContainer.appendChild(message);
         };
 
         const openModal = () => {
@@ -325,15 +335,22 @@ function initPromptControls() {
 
                     if (response.ok) {
                         const data = await response.json();
-                        alert(`Prompt saved as "${data.saved_name}"`);
-                        window.location.reload();
+                        const savedName = data.saved_name || name;
+                        showMessage('status', `Prompt saved as "${savedName}"`);
+                        promptInput.value = savedName;
+                        const list = document.getElementById('prompt-options');
+                        if (list && !Array.from(list.options).some(option => option.value === savedName)) {
+                            const option = document.createElement('option');
+                            option.value = savedName;
+                            list.appendChild(option);
+                        }
                     } else {
                         const errData = await response.json();
-                        alert('Error saving prompt: ' + (errData.error || 'Unknown error'));
+                        showMessage('error', 'Error saving prompt: ' + (errData.error || 'Unknown error'));
                     }
                 } catch (err) {
                     console.error('Save failed:', err);
-                    alert('Failed to save prompt.');
+                    showMessage('error', 'Failed to save prompt.');
                 } finally {
                     confirmBtn.disabled = false;
                     confirmBtn.textContent = 'Save';
