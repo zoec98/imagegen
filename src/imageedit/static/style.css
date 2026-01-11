@@ -347,6 +347,14 @@ button.danger:hover {
     text-align: center;
 }
 
+.info-note {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.6rem;
+}
+
 /* Gallery Columns */
 .cols-1 {
     grid-template-columns: repeat(1, 1fr) !important;

@@ -49,9 +49,17 @@ def get_allowed_sizes(model: str) -> list[str]:
 
 
 def model_supports_image_urls(model: str) -> bool:
+    return image_input_mode(model) != "none"
+
+
+def image_input_mode(model: str) -> str:
     model_info = MODEL_REGISTRY.get(model, {})
     options = model_info.get("options", {})
-    return "image_urls" in options
+    if "image_urls" in options:
+        return "multi"
+    if "image_url" in options:
+        return "single"
+    return "none"
 
 
 def parse_checkbox(values: Sequence[str], *, default: bool = False) -> bool:

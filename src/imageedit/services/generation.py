@@ -19,6 +19,7 @@ def run_generation(
     include_prompt_metadata: bool,
     image_size: str,
     image_urls: str,
+    image_input_mode: str,
     style_name: str | None = None,
 ) -> dict[str, Any]:
     args: list[str] = [selected_model, "--no-preview", "-f", str(prompt_path)]
@@ -26,8 +27,19 @@ def run_generation(
         args.append("-a")
     if image_size.strip():
         args.extend(["-i", image_size.strip()])
-    for url in split_multivalue_field(image_urls):
-        args.extend(["-u", url])
+    urls = split_multivalue_field(image_urls)
+    if image_input_mode == "single":
+        if len(urls) > 1:
+            return {
+                "error": "This model only supports a single source image URL.",
+                "paths": [],
+                "message": None,
+            }
+        if urls:
+            args.extend(["-u", urls[0]])
+    else:
+        for url in urls:
+            args.extend(["-u", url])
 
     meta = {
         "prompt_name": prompt_name,

@@ -27,6 +27,7 @@ from imagegen.registry import MODEL_REGISTRY
 from .forms import (
     default_option,
     get_allowed_sizes,
+    image_input_mode,
     model_supports_image_urls,
     parse_checkbox,
     parse_gallery_height,
@@ -80,7 +81,8 @@ def index() -> str:
         request.form.getlist("include_prompt_metadata"), default=True
     )
     image_urls_text = request.form.get("image_urls", "")
-    supports_image_urls = model_supports_image_urls(selected_model)
+    input_mode = image_input_mode(selected_model)
+    supports_image_urls = input_mode != "none"
     gallery_width = parse_gallery_width(
         request.args.get("gallery_width") or request.form.get("gallery_width")
     )
@@ -153,6 +155,7 @@ def index() -> str:
                         include_prompt_metadata=include_prompt_metadata,
                         image_size=image_size_value,
                         image_urls=image_urls_text if supports_image_urls else "",
+                        image_input_mode=input_mode,
                         style_name=selected_style,
                     )
                     if run_result["error"]:
@@ -192,6 +195,7 @@ def index() -> str:
         allowed_sizes=allowed_sizes,
         include_prompt_metadata=include_prompt_metadata,
         supports_image_urls=supports_image_urls,
+        image_input_mode=input_mode,
         image_urls_text=image_urls_text,
         generated_paths=generated_paths,
         asset_route="imageedit.asset",

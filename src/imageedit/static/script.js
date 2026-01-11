@@ -560,8 +560,55 @@ function initImageSourceControls() {
     const textarea = document.getElementById('image-urls');
     const uploadBtn = document.getElementById('upload-image-btn');
     const fileInput = document.getElementById('local-image-upload');
+    const urlsGroup = document.getElementById('image-urls-group');
+    const messageContainer = document.querySelector('.messages');
+    const promptForm = document.getElementById('main-form');
+    const generateBtn = document.querySelector('button[name="action"][value="run"]');
 
     if (!toggleBtn || !inputContainer || !previewContainer || !textarea) return;
+
+    const showMessage = (type, text) => {
+        if (!messageContainer) return;
+        messageContainer.innerHTML = '';
+        const message = document.createElement('p');
+        message.className = type;
+        message.textContent = text;
+        messageContainer.appendChild(message);
+    };
+
+    const getInputMode = () => {
+        if (!urlsGroup) return 'none';
+        return urlsGroup.dataset.inputMode || 'none';
+    };
+
+    const countUrls = () => {
+        const lines = textarea.value.split(/\r?\n/);
+        let total = 0;
+        lines.forEach(line => {
+            const parts = line.split(',').map(part => part.trim()).filter(Boolean);
+            total += parts.length;
+        });
+        return total;
+    };
+
+    const updateUrlValidation = () => {
+        const mode = getInputMode();
+        if (mode === 'none') return true;
+
+        const count = countUrls();
+        if (mode === 'single' && count !== 1) {
+            showMessage('error', 'Single image only.');
+            if (generateBtn) generateBtn.disabled = true;
+            return false;
+        }
+        if (mode === 'multi' && count < 1) {
+            showMessage('error', 'Please add at least one image URL.');
+            if (generateBtn) generateBtn.disabled = true;
+            return false;
+        }
+        if (generateBtn) generateBtn.disabled = false;
+        return true;
+    };
 
     // Toggle Preview Mode
     toggleBtn.addEventListener('change', () => {
@@ -574,6 +621,29 @@ function initImageSourceControls() {
             previewContainer.style.display = 'none';
         }
     });
+
+    textarea.addEventListener('input', () => {
+        updateUrlValidation();
+        if (toggleBtn.checked) {
+            renderImagePreviews(textarea.value, previewContainer);
+        }
+    });
+
+    if (promptForm) {
+        promptForm.addEventListener('submit', (e) => {
+            if (
+                e.submitter &&
+                e.submitter.name === 'action' &&
+                e.submitter.value === 'run'
+            ) {
+                if (!updateUrlValidation()) {
+                    e.preventDefault();
+                }
+            }
+        });
+    }
+
+    updateUrlValidation();
 
     // Upload Logic (Updated)
     if (uploadBtn && fileInput) {
@@ -606,6 +676,7 @@ function initImageSourceControls() {
                     if (toggleBtn.checked) {
                         renderImagePreviews(textarea.value, previewContainer);
                     }
+                    updateUrlValidation();
                 } else {
                     const err = await response.json();
                     alert('Upload failed: ' + (err.error || 'Unknown error'));

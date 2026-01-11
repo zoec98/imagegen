@@ -99,8 +99,8 @@
           </div>
         </details>
 
-        <div class="control-group" id="image-urls-group" {% if not supports_image_urls %}style="display:none;" {% endif
-          %}>
+        <div class="control-group" id="image-urls-group" data-input-mode="{{ image_input_mode }}"
+          {% if not supports_image_urls %}style="display:none;" {% endif %}>
           <div style="margin-bottom: 5px;">
             <label for="image-urls" style="margin-bottom:0.25rem; display:block;">Source Image URLs</label>
             <div class="image-url-controls">
@@ -113,6 +113,9 @@
               </label>
             </div>
           </div>
+          {% if image_input_mode == "single" %}
+          <div id="image-url-note" class="info-note">Single image only.</div>
+          {% endif %}
           <div id="image-url-input-container">
             <textarea id="image-urls" name="image_urls" rows="3" placeholder="https://..."
               title="Enter one source image URL per line."
