@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 import piexif  # type: ignore[import-untyped]
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 
 def extract_prompt_from_exif(asset_path: Path) -> dict[str, Any]:
@@ -15,6 +18,7 @@ def extract_prompt_from_exif(asset_path: Path) -> dict[str, Any]:
         with Image.open(asset_path) as img:
             exif = img.getexif()
     except Exception:
+        logger.debug("Failed to load EXIF data for %s.", asset_path, exc_info=True)
         exif = None
 
     description = exif.get(piexif.ImageIFD.ImageDescription) if exif else None
@@ -42,7 +46,7 @@ def parse_exif_description(text: str) -> dict[str, Any]:
                     result["prompt"] = arguments.get("prompt")
                 return result
         except json.JSONDecodeError:
-            pass
+            logger.debug("Failed to parse EXIF JSON description.")
 
     prompt_index = text.find("Prompt:")
     if prompt_index == -1:

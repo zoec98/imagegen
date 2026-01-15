@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import random
 from datetime import datetime
@@ -9,6 +10,7 @@ from typing import Any
 import piexif  # type: ignore[import-untyped]
 from PIL import Image
 
+logger = logging.getLogger(__name__)
 # Constants for EXIF settings
 DEFAULT_CAMERA_MAKE = "Canon"
 DEFAULT_CAMERA_MODEL = "Canon EOS 60D"
@@ -61,7 +63,7 @@ def set_exif_data(
     # Check if the image file exists
     if not p.exists():
         if not quiet:
-            print(f"File not found: {p}")
+            logger.warning("File not found: %s", p)
         return False
 
     # Initialize a fresh EXIF dictionary with various sections
@@ -137,10 +139,10 @@ def set_exif_data(
             img.info.pop("exif", None)
             img.save(p, exif=exif_bytes)
         if not quiet:
-            print(f"Updated EXIF data for {p}")
+            logger.info("Updated EXIF data for %s", p)
         return True
     except Exception as e:
         # Handle any errors that occur during the process
         if not quiet:
-            print(f"Error updating EXIF data for {p}: {e}")
+            logger.error("Error updating EXIF data for %s: %s", p, e)
         return False

@@ -164,6 +164,7 @@ uv run flask --app imageedit.app run --debug
 ```
 
 ### Environment and storage
+- On first run, imagegen/imageedit will create a `.env` file with defaults if missing and append any missing keys.
 - imageedit uses the same `FAL_KEY` env var as the CLI because it calls the same fal.ai client.
 - Prompts are stored under `prompts/`, styles under `styles/`, and generated assets under `assets/`.
 - Upload history and generation logs are stored in SQLite at `assets/imageedit.sqlite3`.

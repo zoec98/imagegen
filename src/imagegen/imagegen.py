@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import sys
 import time
@@ -11,7 +12,6 @@ from collections.abc import Iterable, Mapping, MutableSequence, Sequence
 from email.message import Message
 from io import BytesIO
 from pathlib import Path
-from pprint import pprint
 from typing import Any
 from urllib.parse import urlparse
 
@@ -26,6 +26,8 @@ try:  # pragma: no cover - lazy import fallback
     import fal_client  # type: ignore
 except ImportError:  # pragma: no cover
     fal_client = None  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 
 def _truncate_to_word_boundary(text: str, max_chars: int = 50) -> str:
@@ -274,19 +276,19 @@ def _require_fal_client():
 def _emit_request_info(
     endpoint: str, call_type: str, arguments: Mapping[str, Any]
 ) -> None:
-    print("Request:")
-    pprint(
+    logger.info(
+        "Request: %s",
         {
             "endpoint": endpoint,
             "call": call_type,
             "arguments": arguments,
-        }
+        },
     )
 
 
 def _emit_elapsed(elapsed_seconds: float) -> None:
     formatted = _format_elapsed(elapsed_seconds)
-    print(f"Elapsed time: {formatted}")
+    logger.info("Elapsed time: %s", formatted)
 
 
 def _format_elapsed(elapsed_seconds: float) -> str:
@@ -301,7 +303,7 @@ def _handle_post_write(path: Path) -> None:
     try:
         subprocess.run(["/usr/bin/open", str(path)], check=False)  # noqa: S603 - intended.
     except OSError:
-        pass
+        logger.debug("Failed to open preview for %s.", path, exc_info=True)
 
 
 def build_exif_description(parsed: ParsedOptions) -> str | None:
@@ -372,7 +374,7 @@ def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
     model = f"{parsed.model}"
     success = exif.set_exif_data(path, description=description, model=model)
     if not success:
-        print(f"warning: unable to update EXIF data for {path}", file=sys.stderr)
+        logger.warning("Unable to update EXIF data for %s.", path)
 
 
 def _write_jpg(path: Path, data: bytes, options: Mapping[str, Any]) -> None:
@@ -426,7 +428,7 @@ def _save_clean_copy(source_path: Path, output_dir: Path) -> None:
             clean_img.save(target_path)
     except Exception as e:
         # Don't fail the main generation if clean copy fails
-        print(f"Warning: failed to save clean copy: {e}", file=sys.stderr)
+        logger.warning("Failed to save clean copy: %s", e)
 
 
 __all__ = ["generate_images", "upload_image", "save_clean_copy_enabled"]

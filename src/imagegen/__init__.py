@@ -6,7 +6,10 @@ and triggers image generation via imagegen.imagegen.
 
 from __future__ import annotations
 
+import logging
 import sys
+
+from image_common.logging import configure_logging
 
 from .options import parse_args
 
@@ -14,6 +17,8 @@ from .options import parse_args
 def main() -> None:
     """CLI entrypoint: parse argv, run inference, and persist image assets."""
 
+    configure_logging()
+    logger = logging.getLogger(__name__)
     parsed = parse_args(sys.argv[1:])
 
     try:
@@ -21,7 +26,7 @@ def main() -> None:
 
         generated_paths = imagegen_module.generate_images(parsed)
     except Exception as exc:
-        print(f"error: {exc}", file=sys.stderr)
+        logger.exception("Image generation failed.")
         raise SystemExit(1) from exc
 
     for path in generated_paths:

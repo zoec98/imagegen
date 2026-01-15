@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
@@ -51,6 +52,7 @@ ALL_MODELS = sorted(MODEL_REGISTRY.keys())
 _DISALLOWED_NAME_CHARS = {os.sep}
 if os.altsep:
     _DISALLOWED_NAME_CHARS.add(os.altsep)
+logger = logging.getLogger(__name__)
 
 
 def _validate_plain_name(raw_name: str) -> str | None:
@@ -134,7 +136,9 @@ def index() -> str:
                         if clean_path.exists():
                             clean_path.unlink()
                     except Exception as e:
-                        print(f"Warning: failed to delete clean asset: {e}")
+                        logger.warning(
+                            "Failed to delete clean asset %s: %s", clean_path, e
+                        )
 
                 status_message = f"Deleted asset '{asset_filename}'."
             else:

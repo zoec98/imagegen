@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from pathlib import Path
@@ -10,7 +11,8 @@ from typing import Any
 from dotenv import load_dotenv
 from flask import Flask
 
-from image_common.env import save_clean_copy_enabled
+from image_common.env import load_env_file, save_clean_copy_enabled
+from image_common.logging import configure_logging
 from imagegen.registry import MODEL_REGISTRY
 
 from .forms import (
@@ -27,7 +29,10 @@ from .services.prompts import next_copy_name
 def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     """Create and configure the Flask application."""
 
-    load_dotenv(Path(".env"))
+    env_path = load_env_file(Path(".env"))
+    load_dotenv(env_path)
+    configure_logging()
+    logger = logging.getLogger(__name__)
 
     app = Flask(__name__)
     app.config.from_mapping(
@@ -42,7 +47,7 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     _init_storage_dirs(app)
     app.register_blueprint(routes_bp)
 
-    _start_prune_thread(app)
+    _start_prune_thread(app, logger)
 
     return app
 
@@ -57,7 +62,7 @@ def _set_startup_model(app: Flask) -> None:
     app.config["STARTUP_MODEL"] = startup_model
 
 
-def _start_prune_thread(app: Flask) -> None:
+def _start_prune_thread(app: Flask, logger: logging.Logger) -> None:
     if app.config.get("TESTING"):
         return
 
@@ -69,6 +74,7 @@ def _start_prune_thread(app: Flask) -> None:
                 prune_upload_history()
             except Exception:
                 # Avoid breaking startup if pruning fails.
+                logger.warning("Upload history prune failed.", exc_info=True)
                 return
 
     threading.Thread(target=_prune, daemon=True).start()

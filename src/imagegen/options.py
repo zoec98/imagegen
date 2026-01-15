@@ -38,6 +38,8 @@ from typing import Any, Literal, overload
 
 from dotenv import load_dotenv
 
+from image_common.env import load_env_file
+
 from .registry import MODEL_REGISTRY
 
 _DOTENV_FILE = Path(".env")
@@ -482,7 +484,7 @@ def parse_args(
 ) -> ParsedOptions:
     """Parse argv into a ParsedOptions object."""
 
-    load_dotenv(_DOTENV_FILE)  # silently ignore if there is none, assume defaults.
+    load_dotenv(load_env_file(_DOTENV_FILE))
 
     if parser is None:
         parser = build_parser(registry)
