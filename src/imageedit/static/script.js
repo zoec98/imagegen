@@ -553,6 +553,7 @@ function initShortcuts() {
     });
 }
 
+
 function initImageSourceControls() {
     const toggleBtn = document.getElementById('toggle-image-preview');
     const inputContainer = document.getElementById('image-url-input-container');
@@ -565,6 +566,14 @@ function initImageSourceControls() {
     const promptForm = document.getElementById('main-form');
     const generateBtn = document.querySelector('button[name="action"][value="run"]');
 
+    // History elements
+    const historyContainer = document.getElementById('upload-history-container');
+
+    // Initialize history
+    if (historyContainer) {
+        fetchUploadHistory();
+    }
+
     if (!toggleBtn || !inputContainer || !previewContainer || !textarea) return;
 
     const showMessage = (type, text) => {
@@ -574,6 +583,8 @@ function initImageSourceControls() {
         message.className = type;
         message.textContent = text;
         messageContainer.appendChild(message);
+        // Clear message after 3s
+        setTimeout(() => messageContainer.innerHTML = '', 3000);
     };
 
     const getInputMode = () => {
@@ -597,13 +608,14 @@ function initImageSourceControls() {
 
         const count = countUrls();
         if (mode === 'single' && count !== 1) {
-            showMessage('error', 'Single image only.');
-            if (generateBtn) generateBtn.disabled = true;
+            // Only show error if we're trying to submit or explicitly checking
+            // showMessage('error', 'Single image only.');
+            // if (generateBtn) generateBtn.disabled = true;
             return false;
         }
         if (mode === 'multi' && count < 1) {
-            showMessage('error', 'Please add at least one image URL.');
-            if (generateBtn) generateBtn.disabled = true;
+            // showMessage('error', 'Please add at least one image URL.');
+            // if (generateBtn) generateBtn.disabled = true;
             return false;
         }
         if (generateBtn) generateBtn.disabled = false;
@@ -620,6 +632,8 @@ function initImageSourceControls() {
             inputContainer.style.display = 'block';
             previewContainer.style.display = 'none';
         }
+        // Re-render history to match mode
+        renderUploadHistory(currentHistory);
     });
 
     textarea.addEventListener('input', () => {
@@ -636,8 +650,18 @@ function initImageSourceControls() {
                 e.submitter.name === 'action' &&
                 e.submitter.value === 'run'
             ) {
-                if (!updateUrlValidation()) {
+                // Actually validate here
+                const mode = getInputMode();
+                const count = countUrls();
+                if (mode === 'single' && count !== 1) {
+                    showMessage('error', 'Single image only required.');
                     e.preventDefault();
+                    return;
+                }
+                if (mode === 'multi' && count < 1) {
+                    showMessage('error', 'Please provide at least one source image.');
+                    e.preventDefault();
+                    return;
                 }
             }
         });
@@ -677,6 +701,10 @@ function initImageSourceControls() {
                         renderImagePreviews(textarea.value, previewContainer);
                     }
                     updateUrlValidation();
+
+                    // Refresh history
+                    fetchUploadHistory();
+
                 } else {
                     const err = await response.json();
                     alert('Upload failed: ' + (err.error || 'Unknown error'));
@@ -691,7 +719,110 @@ function initImageSourceControls() {
             }
         });
     }
+
+    // Store history locally so we can re-render on toggle
+    let currentHistory = [];
+
+    async function fetchUploadHistory() {
+        try {
+            const response = await fetch('/api/upload-history');
+            if (response.ok) {
+                currentHistory = await response.json();
+                renderUploadHistory(currentHistory);
+            }
+        } catch (err) {
+            console.error('Failed to fetch history:', err);
+        }
+    }
+
+    function renderUploadHistory(history) {
+        if (!historyContainer) return;
+        historyContainer.innerHTML = '';
+
+        if (history.length === 0) {
+            historyContainer.innerHTML = '<div style="grid-column: 1/-1; padding: 0.5rem; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">No upload history.</div>';
+            return;
+        }
+
+        const isPreviewMode = toggleBtn.checked;
+        if (isPreviewMode) {
+            historyContainer.classList.remove('text-mode');
+        } else {
+            historyContainer.classList.add('text-mode');
+        }
+
+        history.forEach(item => {
+            if (isPreviewMode) {
+                // Image Thumbnail Mode
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.title = `Add ${item.filename}`;
+
+                const img = document.createElement('img');
+                img.src = item.url;
+                img.loading = 'lazy';
+
+                const overlay = document.createElement('div');
+                overlay.className = 'history-add-overlay';
+
+                const icon = document.createElement('div');
+                icon.className = 'history-add-icon';
+                icon.textContent = '+';
+
+                overlay.appendChild(icon);
+                div.appendChild(img);
+                div.appendChild(overlay);
+
+                div.addEventListener('click', () => {
+                    addToInput(item.url);
+                    flashItem(div);
+                });
+
+                historyContainer.appendChild(div);
+            } else {
+                // Text Mode
+                const div = document.createElement('div');
+                div.className = 'history-item-text';
+
+                const span = document.createElement('span');
+                span.className = 'history-url-text';
+                span.textContent = item.url;
+                span.title = item.url;
+
+                const addBtn = document.createElement('button');
+                addBtn.className = 'history-add-btn';
+                addBtn.textContent = '+';
+                addBtn.title = 'Add to input';
+                addBtn.type = 'button';
+
+                addBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    addToInput(item.url);
+                    flashItem(div);
+                });
+
+                div.appendChild(span);
+                div.appendChild(addBtn);
+                historyContainer.appendChild(div);
+            }
+        });
+
+        function addToInput(url) {
+            const currentText = textarea.value.trim();
+            textarea.value = currentText ? `${currentText}\n${url}` : url;
+            if (toggleBtn.checked) {
+                renderImagePreviews(textarea.value, previewContainer);
+            }
+            updateUrlValidation();
+        }
+
+        function flashItem(element) {
+            element.style.borderColor = 'var(--accent)';
+            setTimeout(() => element.style.borderColor = '', 200);
+        }
+    }
 }
+
 
 function renderImagePreviews(text, container) {
     container.innerHTML = '';
@@ -888,14 +1019,6 @@ function initModelSizeSync() {
 
     if (!modelSelect || !sizeSelect) return;
 
-    let hideTimer = null;
-
-    const triggerFlash = (element) => {
-        element.classList.remove('flash-attention');
-        void element.offsetWidth;
-        element.classList.add('flash-attention');
-    };
-
     modelSelect.addEventListener('change', async () => {
         const model = modelSelect.value;
         if (!model) return;
@@ -912,23 +1035,7 @@ function initModelSizeSync() {
             // Toggle URL input visibility
             const urlsGroup = document.getElementById('image-urls-group');
             if (urlsGroup) {
-                if (hideTimer) {
-                    clearTimeout(hideTimer);
-                    hideTimer = null;
-                }
-
-                const isHidden = getComputedStyle(urlsGroup).display === 'none';
-                if (supportsUrls) {
-                    urlsGroup.style.display = 'block';
-                    triggerFlash(urlsGroup);
-                } else if (!isHidden) {
-                    triggerFlash(urlsGroup);
-                    hideTimer = setTimeout(() => {
-                        urlsGroup.style.display = 'none';
-                        urlsGroup.classList.remove('flash-attention');
-                        hideTimer = null;
-                    }, 900);
-                }
+                urlsGroup.style.display = supportsUrls ? 'block' : 'none';
             }
 
             // Clear existing options

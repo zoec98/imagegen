@@ -45,8 +45,8 @@
           <div class="button-row" style="margin-top: 2px;">
             <button type="button" id="load-prompt-btn" class="secondary" style="font-size:0.8rem;"
               title="(l) Load the prompt for editing.">Load Prompt</button>
-            <button type="button" id="duplicate-prompt-btn" class="secondary"
-              style="font-size:0.8rem;" title="(d) Duplicate the current prompt.">Duplicate</button>
+            <button type="button" id="duplicate-prompt-btn" class="secondary" style="font-size:0.8rem;"
+              title="(d) Duplicate the current prompt.">Duplicate</button>
           </div>
           <div class="button-row" style="margin-top: 5px;">
             <button type="button" id="save-prompt-btn" class="secondary" style="font-size:0.8rem;"
@@ -85,22 +85,21 @@
             <option value="{{ style }}" {% if style==selected_style %}selected{% endif %}>{{ style }}</option>
             {% endfor %}
           </select>
-          <textarea id="style-name-custom" name="style_name_custom" rows="3"
-            title="Edit the style prompt text."
+          <textarea id="style-name-custom" name="style_name_custom" rows="3" title="Edit the style prompt text."
             placeholder="Or type custom style...">{% if selected_style not in style_names %}{{ selected_style }}{% endif %}</textarea>
           <button type="button" id="insert-style-btn" class="secondary" style="font-size:0.8rem; margin-top:2px;"
             title="(I) Append the style block to the prompt.">Insert
             to Prompt</button>
           <div class="button-row" style="margin-top: 0.5rem;">
-            <button type="button" id="save-style-btn" class="secondary"
-              title="Save the current style text.">Save Style</button>
-            <button type="button" id="delete-style-btn" class="danger"
-              title="Delete the selected style.">Delete Style</button>
+            <button type="button" id="save-style-btn" class="secondary" title="Save the current style text.">Save
+              Style</button>
+            <button type="button" id="delete-style-btn" class="danger" title="Delete the selected style.">Delete
+              Style</button>
           </div>
         </details>
 
-        <div class="control-group" id="image-urls-group" data-input-mode="{{ image_input_mode }}"
-          {% if not supports_image_urls %}style="display:none;" {% endif %}>
+        <div class="control-group" id="image-urls-group" data-input-mode="{{ image_input_mode }}" {% if not
+          supports_image_urls %}style="display:none;" {% endif %}>
           <div style="margin-bottom: 5px;">
             <label for="image-urls" style="margin-bottom:0.25rem; display:block;">Source Image URLs</label>
             <div class="image-url-controls">
@@ -118,14 +117,23 @@
           {% endif %}
           <div id="image-url-input-container">
             <textarea id="image-urls" name="image_urls" rows="3" placeholder="https://..."
-              title="Enter one source image URL per line."
-              spellcheck="false">{{ image_urls_text }}</textarea>
+              title="Enter one source image URL per line." spellcheck="false">{{ image_urls_text }}</textarea>
           </div>
           <div id="image-preview-container" class="image-preview-grid" style="display:none;">
             <!-- Previews will be injected here -->
           </div>
           <input type="file" id="local-image-upload" accept="image/*" style="display:none;"
             title="Choose a local image to upload.">
+
+          <details class="control-group" id="upload-history-group" style="margin-top: 1rem;">
+            <summary title="Show recently uploaded images.">Recent Uploads</summary>
+            <div id="upload-history-container" class="history-grid">
+              <!-- History items injected via JS -->
+              <div style="padding: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                Loading...
+              </div>
+            </div>
+          </details>
         </div>
 
         <div class="control-group">
@@ -205,8 +213,8 @@
                 <input type="hidden" name="prompt_name" value="{{ selected_prompt }}">
                 <input type="hidden" name="model_name" value="{{ selected_model }}">
                 <input type="hidden" name="prompt_text" value="{{ prompt_text }}">
-                <button type="submit" name="action" value="asset_load"
-                  title="Load this asset's prompt parameters.">Use Params</button>
+                <button type="submit" name="action" value="asset_load" title="Load this asset's prompt parameters.">Use
+                  Params</button>
                 <button type="submit" name="action" value="asset_delete" class="danger"
                   data-confirm="Delete this asset?" title="Delete this generated asset.">Delete</button>
               </form>
@@ -317,8 +325,8 @@
         <div class="modal-footer">
           <button type="button" id="cancel-delete-style-btn" class="secondary"
             title="Cancel deleting the style.">Cancel</button>
-          <button type="button" id="confirm-delete-style-btn" class="danger"
-            title="Delete this style permanently.">Yes, Delete</button>
+          <button type="button" id="confirm-delete-style-btn" class="danger" title="Delete this style permanently.">Yes,
+            Delete</button>
         </div>
       </div>
     </div>

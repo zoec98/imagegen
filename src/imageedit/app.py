@@ -40,6 +40,15 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     _set_startup_model(app)
     _init_storage_dirs(app)
     app.register_blueprint(routes_bp)
+
+    # Prune expired history
+    from .services.uploads import prune_upload_history
+    try:
+        prune_upload_history()
+    except Exception:
+        # Don't crash startup if pruning fails
+        pass
+
     return app
 
 
