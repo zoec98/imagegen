@@ -223,14 +223,29 @@ def api_upload():
         return {"error": "No file provided"}, 400
 
     file = request.files["file"]
+    filename = file.filename or "unknown"
     try:
         url = upload_local_image(file)
+        # Verify if we should save history here or if upload_local_image handles it.
+        # Ideally, we call the save helper here.
+        from .services.uploads import save_upload_to_history
+
+        save_upload_to_history(url, filename)
+
     except ValueError as exc:
         return {"error": str(exc)}, 400
     except Exception as exc:
         return {"error": str(exc)}, 500
 
     return {"url": url}
+
+
+@bp.route("/api/upload-history")
+def api_get_upload_history():
+    """Return the list of past uploads."""
+    from .services.uploads import get_upload_history
+
+    return jsonify(get_upload_history())
 
 
 @bp.route("/api/model-sizes/<model>")

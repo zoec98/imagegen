@@ -103,3 +103,40 @@ def test_api_model_sizes_flags_image_urls_support(tmp_path):
     payload = response.get_json()
 
     assert payload["supports_image_urls"] is True
+
+
+def test_save_upload_to_history_persists_entry(tmp_path):
+    """Verify save_upload_to_history writes entry to JSON file."""
+    import json
+
+    from imageedit.services.uploads import get_upload_history, save_upload_to_history
+
+    # Create app context with temp assets dir
+    client, _, _ = _make_client(tmp_path)
+    assets_dir = tmp_path / "assets"
+    assets_dir.mkdir(parents=True, exist_ok=True)
+
+    with client.application.app_context():
+        # Save an entry
+        save_upload_to_history("https://example.com/image1.png", "image1.png")
+
+        # Verify it's in the history
+        history = get_upload_history()
+        assert len(history) == 1
+        assert history[0]["url"] == "https://example.com/image1.png"
+        assert history[0]["filename"] == "image1.png"
+        assert "timestamp" in history[0]
+
+        # Save another and verify ordering (newest first)
+        save_upload_to_history("https://example.com/image2.png", "image2.png")
+        history = get_upload_history()
+        assert len(history) == 2
+        assert history[0]["url"] == "https://example.com/image2.png"
+        assert history[1]["url"] == "https://example.com/image1.png"
+
+        # Verify file exists on disk
+        history_file = assets_dir / "upload_history.json"
+        assert history_file.exists()
+        with open(history_file, encoding="utf-8") as f:
+            disk_data = json.load(f)
+        assert len(disk_data) == 2
