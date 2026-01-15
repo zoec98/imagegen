@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from flask import (
     Blueprint,
+    abort,
     current_app,
     jsonify,
     render_template,
@@ -46,6 +48,22 @@ from .services.uploads import upload_local_image
 
 bp = Blueprint("imageedit", __name__)
 ALL_MODELS = sorted(MODEL_REGISTRY.keys())
+_DISALLOWED_NAME_CHARS = {os.sep}
+if os.altsep:
+    _DISALLOWED_NAME_CHARS.add(os.altsep)
+
+
+def _validate_plain_name(raw_name: str) -> str | None:
+    name = raw_name.strip()
+    if not name:
+        return None
+    if name.startswith("."):
+        return None
+    if any(ch in name for ch in _DISALLOWED_NAME_CHARS):
+        return None
+    if "." in name:
+        return None
+    return name
 
 
 @bp.route("/", methods=["GET", "POST"])
@@ -209,6 +227,16 @@ def index() -> str:
 
 @bp.route("/assets/<path:filename>")
 def asset(filename: str):
+    if not filename:
+        abort(404)
+    path = Path(filename)
+    if any(part.startswith(".") for part in path.parts):
+        abort(404)
+    if path.suffix.lower() in {".sqlite", ".sqlite3", ".db"}:
+        abort(404)
+    allowed_suffixes = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff"}
+    if path.suffix.lower() not in allowed_suffixes:
+        abort(404)
     assets_dir = Path(current_app.config["ASSETS_DIR"])
     if not assets_dir.is_absolute():
         assets_dir = (Path.cwd() / assets_dir).resolve()
@@ -262,8 +290,11 @@ def api_model_sizes(model: str):
 @bp.route("/api/prompt/<name>")
 def api_get_prompt(name: str):
     """Return prompt text for a given prompt name."""
+    validated = _validate_plain_name(name)
+    if not validated:
+        return jsonify({"error": "Invalid prompt name"}), 400
     prompts_dir = Path(current_app.config["PROMPTS_DIR"])
-    prompt_file = prompt_path(prompts_dir, name)
+    prompt_file = prompt_path(prompts_dir, validated)
     if prompt_file.exists():
         text = read_prompt(prompt_file)
         return jsonify({"text": text})
@@ -273,8 +304,11 @@ def api_get_prompt(name: str):
 @bp.route("/api/style/<name>")
 def api_get_style(name: str):
     """Return style text for a given style name."""
+    validated = _validate_plain_name(name)
+    if not validated:
+        return jsonify({"error": "Invalid style name"}), 400
     styles_dir = Path(current_app.config["STYLES_DIR"])
-    style_path = prompt_path(styles_dir, name)
+    style_path = prompt_path(styles_dir, validated)
     if style_path.exists():
         text = read_prompt(style_path)
         return jsonify({"text": text})
@@ -288,16 +322,16 @@ def api_save_style():
     if not data or "name" not in data or "text" not in data:
         return jsonify({"error": "Missing name or text"}), 400
 
-    name = data["name"].strip()
+    name = data["name"]
     text = data["text"]
-    if not name:
+    validated = _validate_plain_name(name)
+    if not validated:
         return jsonify({"error": "Style name cannot be empty"}), 400
 
     styles_dir = Path(current_app.config["STYLES_DIR"])
     styles_dir.mkdir(parents=True, exist_ok=True)
 
-    sanitized = normalize_prompt_name(name)
-    base_name = sanitized
+    base_name = normalize_prompt_name(validated)
     counter = 0
     while True:
         candidate_name = base_name if counter == 0 else f"{base_name}_{counter}"
@@ -320,19 +354,20 @@ def api_delete_style():
     if not data or "name" not in data:
         return jsonify({"error": "Missing name"}), 400
 
-    name = data["name"].strip()
-    if not name:
+    name = data["name"]
+    validated = _validate_plain_name(name)
+    if not validated:
         return jsonify({"error": "Style name cannot be empty"}), 400
 
     styles_dir = Path(current_app.config["STYLES_DIR"])
-    style_path = prompt_path(styles_dir, name)
+    style_path = prompt_path(styles_dir, validated)
 
     if not style_path.exists():
-        return jsonify({"error": f"Style '{name}' not found"}), 404
+        return jsonify({"error": f"Style '{validated}' not found"}), 404
 
     try:
         style_path.unlink()
-        return jsonify({"success": True, "deleted_name": name})
+        return jsonify({"success": True, "deleted_name": validated})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -344,15 +379,16 @@ def api_save_prompt():
     if not data or "name" not in data or "text" not in data:
         return jsonify({"error": "Missing name or text"}), 400
 
-    name = data["name"].strip()
+    name = data["name"]
     text = data["text"]
-    if not name:
+    validated = _validate_plain_name(name)
+    if not validated:
         return jsonify({"error": "Prompt name cannot be empty"}), 400
 
     prompts_dir = Path(current_app.config["PROMPTS_DIR"])
     prompts_dir.mkdir(parents=True, exist_ok=True)
 
-    sanitized = normalize_prompt_name(name)
+    sanitized = normalize_prompt_name(validated)
     prompt_file = prompt_path(prompts_dir, sanitized)
 
     try:
@@ -369,19 +405,20 @@ def api_delete_prompt():
     if not data or "name" not in data:
         return jsonify({"error": "Missing name"}), 400
 
-    name = data["name"].strip()
-    if not name:
+    name = data["name"]
+    validated = _validate_plain_name(name)
+    if not validated:
         return jsonify({"error": "Prompt name cannot be empty"}), 400
 
     prompts_dir = Path(current_app.config["PROMPTS_DIR"])
-    prompt_file = prompt_path(prompts_dir, name)
+    prompt_file = prompt_path(prompts_dir, validated)
 
     if not prompt_file.exists():
-        return jsonify({"error": f"Prompt '{name}' not found"}), 404
+        return jsonify({"error": f"Prompt '{validated}' not found"}), 404
 
     try:
         prompt_file.unlink()
-        return jsonify({"success": True, "deleted_name": name})
+        return jsonify({"success": True, "deleted_name": validated})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -393,15 +430,16 @@ def api_duplicate_prompt():
     if not data or "name" not in data or "text" not in data:
         return jsonify({"error": "Missing name or text"}), 400
 
-    name = data["name"].strip()
+    name = data["name"]
     text = data["text"]
-    if not name:
+    validated = _validate_plain_name(name)
+    if not validated:
         return jsonify({"error": "Prompt name cannot be empty"}), 400
 
     prompts_dir = Path(current_app.config["PROMPTS_DIR"])
     prompts_dir.mkdir(parents=True, exist_ok=True)
 
-    duplicate_name = next_copy_name(name)
+    duplicate_name = next_copy_name(validated)
     duplicate_path = prompt_path(prompts_dir, duplicate_name)
 
     try:

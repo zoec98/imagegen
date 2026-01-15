@@ -11,7 +11,7 @@
 - As functionality becomes shared between CLI and Flask (e.g., prompt helpers, validation),
   move it into a `src/image_common/` package and import it from both call sites.
 - The CLI auto-opens generated assets on macOS; pass `--no-preview` (the Flask app already does this) to skip opening.
-- Tests under `tests/` mirror CLI scenarios; pair new features with matching `test_<feature>.py` modules.
+- Tests under `tests/` mirror CLI scenarios; pair new features with matching `test_<feature>.py` modules. We always run all tests; this is fast enough.
 - File prompts resolve against `prompts/`; store reusable fixtures there when a test needs disk input.
 
 ## Flask App Expectations
@@ -24,7 +24,7 @@
 ## Build, Test, and Development Commands
 - `uv run imagegen dev -p "demo prompt"` executes the CLI; swap the model key to exercise other registry entries.
 - `uv run flask --app imageedit.app run --debug` runs the Flask server in development mode.
-- `uv run pytest` runs the suite; append `-k name` or `--maxfail=1` while iterating locally.
+- `uv run pytest` runs the full suite; we always run all tests because this is fast enough.
 - `uv run ruff format` to format the source code, run before pushing.
 - `uv run ruff check --fix` to lint (and autofix) the source where needed, run before pushing.
 - `uv run mypy src` typing clean; run before pushing.
@@ -43,7 +43,8 @@
 ## Commit & Pull Request Guidelines
 - History shows short present-tense summaries (e.g., `Option parsing`); follow that style and stay under 60 chars.
 - PRs should link tickets when relevant, describe behavioral changes, and attach CLI output if it clarifies the result.
-- Verify `ruff format`, `mypy`, and `pytest` locally; call out any skipped checks with justification.
+- Verify `ruff format`, `mypy`, and `pytest` locally; we always run the full test suite because this is fast enough.
+  Call out any skipped checks with justification.
 
 ## Agent-Specific Notes
 - Prefer `uv run` over system Python so dependencies resolve consistently.
@@ -51,6 +52,9 @@
 - Try to avoid editing `pyproject.toml`, if there is an `uv` subcommand to do the same:
   `uv add dependency`, or `uv add --dev dependency`, for example.
 - Never edit `uv.lock`, always use `uv lock` to update, and `uv sync` to check.
+- Standard HTTP client is `httpx`; use synchronous requests unless explicitly directed to go async.
+- Standard data storage is SQLite (prefer `sqlite3` unless SQLAlchemy is required).
+- imageedit stores upload history and generation logs in `assets/imageedit.sqlite3`.
 - For the Flask app, make use of the Flask ecosystem and use existing Flask modules where useful
   (forms, validation, sessions, etc.)
 - Treat `registry.py` as the source of truth; document and test any change in available options.

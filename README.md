@@ -149,6 +149,7 @@ Features
 - Style CRUD backed by `styles/`, plus quick insert into the prompt editor.
 - Model selection and preset size selector synced to the registry via `/api/model-sizes`.
 - Optional source image URLs (`-u`) with local file uploads sent to fal storage.
+- Recent uploads panel backed by `/api/upload-history`.
 - Asset gallery with EXIF-based prompt reload and quick delete.
 - Runs invoke the CLI pipeline with `--no-preview` and surface generated assets.
 
@@ -165,6 +166,7 @@ uv run flask --app imageedit.app run --debug
 ### Environment and storage
 - imageedit uses the same `FAL_KEY` env var as the CLI because it calls the same fal.ai client.
 - Prompts are stored under `prompts/`, styles under `styles/`, and generated assets under `assets/`.
+- Upload history and generation logs are stored in SQLite at `assets/imageedit.sqlite3`.
 
 ### Security considerations
 This Flask app has no authentication or network security.

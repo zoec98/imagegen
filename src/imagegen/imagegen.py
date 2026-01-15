@@ -48,6 +48,14 @@ def generate_images(
     parsed: ParsedOptions, *, output_dir: Path | None = None
 ) -> list[Path]:
     """Invoke the target fal endpoint and download any returned images."""
+    written, _ = generate_images_with_urls(parsed, output_dir=output_dir)
+    return written
+
+
+def generate_images_with_urls(
+    parsed: ParsedOptions, *, output_dir: Path | None = None
+) -> tuple[list[Path], list[str]]:
+    """Invoke the target fal endpoint and return paths with their source URLs."""
 
     client = _require_fal_client()
 
@@ -125,7 +133,7 @@ def generate_images(
             _handle_post_write(path)
         written.append(path)
 
-    return written
+    return written, urls
 
 
 def _coerce_payload(invocation: Any) -> Any:
@@ -296,68 +304,71 @@ def _handle_post_write(path: Path) -> None:
         pass
 
 
-def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
-    description: str | None = None
-    if parsed.add_prompt_metadata:
-        arguments = dict(parsed.params)
-        # We don't want to leak local file names
-        arguments.pop("file", None)
-        # We don't want to leak image server URLs
-        source_base = get_source_image_url()
-        safetensors_base = get_safetensors_url()
+def build_exif_description(parsed: ParsedOptions) -> str | None:
+    if not parsed.add_prompt_metadata:
+        return None
 
-        for key in ("image_url", "image_urls"):
-            value = arguments.get(key)
-            if isinstance(value, str):
-                if value.startswith(source_base):
-                    arguments[key] = value[len(source_base) :]
-            elif isinstance(value, list):
-                shortened: list[Any] = []
-                for entry in value:
-                    if isinstance(entry, str) and entry.startswith(source_base):
-                        shortened.append(entry[len(source_base) :])
-                    else:
-                        shortened.append(entry)
-                arguments[key] = shortened
+    arguments = dict(parsed.params)
+    # We don't want to leak local file names
+    arguments.pop("file", None)
+    # We don't want to leak image server URLs
+    source_base = get_source_image_url()
+    safetensors_base = get_safetensors_url()
 
-        # Also don't leak SAFETENSOR URLs
-        loras_value = arguments.get("loras")
-        if isinstance(loras_value, list):
-            normalized_loras: list[Any] = []
-            for entry in loras_value:
-                if isinstance(entry, dict):
-                    lora_path = entry.get("path")
-                    if isinstance(lora_path, str) and lora_path.startswith(
-                        safetensors_base
-                    ):
-                        updated = dict(entry)
-                        updated["path"] = lora_path[len(safetensors_base) :]
-                        normalized_loras.append(updated)
-                    else:
-                        normalized_loras.append(entry)
-                elif isinstance(entry, str) and entry.startswith(safetensors_base):
-                    normalized_loras.append(entry[len(safetensors_base) :])
+    for key in ("image_url", "image_urls"):
+        value = arguments.get(key)
+        if isinstance(value, str):
+            if value.startswith(source_base):
+                arguments[key] = value[len(source_base) :]
+        elif isinstance(value, list):
+            shortened: list[Any] = []
+            for entry in value:
+                if isinstance(entry, str) and entry.startswith(source_base):
+                    shortened.append(entry[len(source_base) :])
+                else:
+                    shortened.append(entry)
+            arguments[key] = shortened
+
+    # Also don't leak SAFETENSOR URLs
+    loras_value = arguments.get("loras")
+    if isinstance(loras_value, list):
+        normalized_loras: list[Any] = []
+        for entry in loras_value:
+            if isinstance(entry, dict):
+                lora_path = entry.get("path")
+                if isinstance(lora_path, str) and lora_path.startswith(
+                    safetensors_base
+                ):
+                    updated = dict(entry)
+                    updated["path"] = lora_path[len(safetensors_base) :]
+                    normalized_loras.append(updated)
                 else:
                     normalized_loras.append(entry)
-            arguments["loras"] = normalized_loras
+            elif isinstance(entry, str) and entry.startswith(safetensors_base):
+                normalized_loras.append(entry[len(safetensors_base) :])
+            else:
+                normalized_loras.append(entry)
+        arguments["loras"] = normalized_loras
 
-        # ready to save the prompt in exif
-        desc_data = {
-            "model": parsed.model,
-            "endpoint": parsed.endpoint,
-            "call": parsed.call,
-            "arguments": arguments,
-        }
-        if parsed.extra_metadata:
-            desc_data.update(parsed.extra_metadata)
+    desc_data = {
+        "model": parsed.model,
+        "endpoint": parsed.endpoint,
+        "call": parsed.call,
+        "arguments": arguments,
+    }
+    if parsed.extra_metadata:
+        desc_data.update(parsed.extra_metadata)
 
-        description = json.dumps(
-            desc_data,
-            ensure_ascii=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        )
+    return json.dumps(
+        desc_data,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
 
+
+def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
+    description = build_exif_description(parsed)
     model = f"{parsed.model}"
     success = exif.set_exif_data(path, description=description, model=model)
     if not success:

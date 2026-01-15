@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -41,13 +42,7 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     _init_storage_dirs(app)
     app.register_blueprint(routes_bp)
 
-    # Prune expired history
-    from .services.uploads import prune_upload_history
-    try:
-        prune_upload_history()
-    except Exception:
-        # Don't crash startup if pruning fails
-        pass
+    _start_prune_thread(app)
 
     return app
 
@@ -60,6 +55,23 @@ def _set_startup_model(app: Flask) -> None:
             f"STARTUP_MODEL must be one of: {valid}. Current value: {startup_model!r}"
         )
     app.config["STARTUP_MODEL"] = startup_model
+
+
+def _start_prune_thread(app: Flask) -> None:
+    if app.config.get("TESTING"):
+        return
+
+    from .services.uploads import prune_upload_history
+
+    def _prune() -> None:
+        with app.app_context():
+            try:
+                prune_upload_history()
+            except Exception:
+                # Avoid breaking startup if pruning fails.
+                return
+
+    threading.Thread(target=_prune, daemon=True).start()
 
 
 def _init_storage_dirs(app: Flask) -> None:

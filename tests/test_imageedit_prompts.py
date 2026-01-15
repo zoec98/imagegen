@@ -99,9 +99,11 @@ def test_run_generates_images(monkeypatch, tmp_path):
 
     def fake_generate(parsed):
         captured["parsed"] = parsed
-        return [Path("assets/delta-1.png")]
+        return [Path("assets/delta-1.png")], ["https://example.com/delta-1.png"]
 
-    monkeypatch.setattr("imageedit.services.generation.generate_images", fake_generate)
+    monkeypatch.setattr(
+        "imageedit.services.generation.generate_images_with_urls", fake_generate
+    )
 
     response = client.post(
         "/",
@@ -136,9 +138,11 @@ def test_run_with_image_urls(monkeypatch, tmp_path):
 
     def fake_generate(parsed):
         captured["parsed"] = parsed
-        return [Path("assets/edit-1.png")]
+        return [Path("assets/edit-1.png")], ["https://example.com/edit-1.png"]
 
-    monkeypatch.setattr("imageedit.services.generation.generate_images", fake_generate)
+    monkeypatch.setattr(
+        "imageedit.services.generation.generate_images_with_urls", fake_generate
+    )
 
     response = client.post(
         "/",
@@ -162,7 +166,7 @@ def test_run_with_image_urls(monkeypatch, tmp_path):
     assert parsed.preview_assets is False
 
 
-def test_asset_route_serves_files(tmp_path):
+def test_asset_route_rejects_non_images(tmp_path):
     client, _, assets_dir = _make_client(tmp_path)
     assets_dir.mkdir(parents=True, exist_ok=True)
     target = assets_dir / "test.txt"
@@ -170,8 +174,7 @@ def test_asset_route_serves_files(tmp_path):
 
     response = client.get("/assets/test.txt")
 
-    assert response.status_code == 200
-    assert response.get_data(as_text=True) == "hello, world"
+    assert response.status_code == 404
 
 
 def test_next_copy_name_increments_suffixes():
