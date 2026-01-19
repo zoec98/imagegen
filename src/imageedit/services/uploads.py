@@ -9,11 +9,18 @@ import tempfile
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Protocol
 
 import httpx
 from flask import current_app
 
 from imagegen.imagegen import upload_image
+
+
+class HttpClient(Protocol):
+    """Protocol for HTTP clients that support HEAD requests."""
+
+    def head(self, url: str, timeout: float) -> httpx.Response: ...
 
 
 def upload_local_image(file) -> str:
@@ -128,7 +135,7 @@ def get_upload_history(*, db_path: Path | None = None) -> list[dict]:
 def prune_upload_history(
     *,
     db_path: Path | None = None,
-    http_client: object | None = None,
+    http_client: HttpClient | None = None,
 ) -> None:
     """Check validity of all URLs in history and remove dead links."""
     db_path = _resolve_db_path(db_path)
