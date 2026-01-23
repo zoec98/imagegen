@@ -276,7 +276,7 @@ def _require_fal_client():
 def _emit_request_info(
     endpoint: str, call_type: str, arguments: Mapping[str, Any]
 ) -> None:
-    logger.info(
+    logger.warning(
         "Request: %s",
         {
             "endpoint": endpoint,
