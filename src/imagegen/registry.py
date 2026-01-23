@@ -82,6 +82,141 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
             },
         },
     },
+    # Bria fibo text-to-image model
+    "fibo": {
+        "endpoint": "bria/fibo/generate",
+        "call": "subscribe",
+        "doc_url": "https://fal.ai/models/bria/fibo/generate/api#schema",
+        "options": {
+            "prompt": {
+                "type": "prompt",
+                "default": None,
+                "help": "prompt text",
+                "file_help": "prompt file in prompts/",
+            },
+            "structured_prompt": {
+                "type": str,
+                "default": None,
+                "help": "structured prompt JSON",
+                "flags": ["--structured-prompt"],
+                "metavar": "JSON",
+            },
+            "image_url": {
+                "type": str,
+                "default": None,
+                "help": "reference image URL",
+                "flags": ["--image-url", "-u"],
+                "metavar": "URL",
+            },
+            "seed": {
+                "type": int,
+                "default": 5555,
+                "help": "random seed for reproducibility",
+                "flags": ["-s", "--seed"],
+            },
+            "steps_num": {
+                "type": int,
+                "default": 50,
+                "help": "number of inference steps",
+            },
+            "aspect_ratio": {
+                "type": "i",
+                "default": "1:1",
+                "help": "aspect ratio preset",
+                "allowed_sizes": [
+                    "1:1",
+                    "2:3",
+                    "3:2",
+                    "3:4",
+                    "4:3",
+                    "4:5",
+                    "5:4",
+                    "9:16",
+                    "16:9",
+                ],
+                "flags": ["-i", "--aspect-ratio"],
+            },
+            "negative_prompt": {
+                "type": str,
+                "default": "",
+                "help": "negative prompt text",
+                "flags": ["-n", "--negative-prompt"],
+            },
+            "guidance_scale": {
+                "type": int,
+                "default": 5,
+                "help": "guidance scale for text",
+            },
+            "sync_mode": {
+                "type": bool,
+                "default": False,
+                "help": "return image data directly (synchronous mode)",
+                "disable_help": "disable synchronous mode",
+            },
+        },
+    },
+    # Bria fibo edit model
+    "fibo-edit": {
+        "endpoint": "bria/fibo-edit/edit",
+        "call": "subscribe",
+        "doc_url": "https://fal.ai/models/bria/fibo-edit/edit/api#schema",
+        "options": {
+            "image_url": {
+                "type": str,
+                "default": None,
+                "help": "reference image URL",
+                "flags": ["--image-url", "-u"],
+                "metavar": "URL",
+            },
+            "mask_url": {
+                "type": str,
+                "default": None,
+                "help": "mask image URL",
+                "flags": ["--mask-url"],
+                "metavar": "URL",
+            },
+            "instruction": {
+                "type": str,
+                "default": None,
+                "help": "instruction for image editing",
+            },
+            "structured_instruction": {
+                "type": str,
+                "default": None,
+                "help": "structured instruction JSON",
+                "flags": ["--structured-instruction"],
+                "metavar": "JSON",
+            },
+            "seed": {
+                "type": int,
+                "default": 5555,
+                "help": "random seed for reproducibility",
+                "flags": ["-s", "--seed"],
+            },
+            "steps_num": {
+                "type": int,
+                "default": 50,
+                "help": "number of inference steps",
+            },
+            "negative_prompt": {
+                "type": str,
+                "default": "",
+                "help": "negative prompt text",
+                "flags": ["-n", "--negative-prompt"],
+            },
+            "guidance_scale": {
+                "type": float,
+                "default": 5,
+                "help": "guidance scale for text",
+            },
+            "sync_mode": {
+                "type": bool,
+                "default": False,
+                "help": "return image data directly (synchronous mode)",
+                "disable_help": "disable synchronous mode",
+            },
+        },
+    },
     # HiDream fast text-to-image model
     "hidream-fast": {
         "endpoint": "fal-ai/hidream-i1-fast",
@@ -1649,11 +1784,11 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
             },
         },
     },
-    # qwen-image-edit (image editing with multiple reference images)
-    "qwen-image-edit": {
-        "endpoint": "fal-ai/qwen-image-edit-plus",
+    # qwen-image (text-to-image)
+    "qwen-image": {
+        "endpoint": "fal-ai/qwen-image-2512",
         "call": "subscribe",
-        "doc_url": "https://fal.ai/models/fal-ai/qwen-image-edit-plus/api#schema",
+        "doc_url": "https://fal.ai/models/fal-ai/qwen-image-2512/api#schema",
         "options": {
             "prompt": {
                 "type": "prompt",
@@ -1661,9 +1796,15 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "help": "prompt text",
                 "file_help": "prompt file in prompts/",
             },
+            "negative_prompt": {
+                "type": str,
+                "default": "",
+                "help": "negative prompt to steer away from unwanted details",
+                "flags": ["-n", "--negative-prompt"],
+            },
             "image_size": {
                 "type": "whi",
-                "default": "portrait_4_3",
+                "default": "landscape_4_3",
                 "help": "preset image size",
                 "allowed_sizes": [
                     "square_hd",
@@ -1677,8 +1818,8 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
             },
             "num_inference_steps": {
                 "type": int,
-                "default": 50,
-                "help": "number of diffusion steps",
+                "default": 28,
+                "help": "number of inference steps",
             },
             "guidance_scale": {
                 "type": float,
@@ -1691,6 +1832,12 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "help": "random seed (omit for random)",
                 "flags": ["-s", "--seed"],
             },
+            "sync_mode": {
+                "type": bool,
+                "default": False,
+                "help": "return image data directly (synchronous mode)",
+                "disable_help": "disable synchronous mode",
+            },
             "num_images": {
                 "type": int,
                 "default": 1,
@@ -1699,15 +1846,54 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
             },
             "enable_safety_checker": {
                 "type": bool,
-                "default": False,
+                "default": True,
                 "help": "enable the model safety checker",
                 "disable_help": "disable the model safety checker",
                 "flags": ["-%", "--enable-safety-checker"],
             },
             "output_format": {
                 "type": str,
-                "default": "jpeg",
-                "help": "output image format (jpeg, png)",
+                "default": "png",
+                "help": "output image format (jpeg, png, webp)",
+            },
+            "acceleration": {
+                "type": str,
+                "default": "regular",
+                "help": "acceleration preset (none, regular, high)",
+            },
+        },
+    },
+    # qwen-image-edit (image editing with multiple reference images)
+    "qwen-image-edit": {
+        "endpoint": "fal-ai/qwen-image-edit-2511",
+        "call": "subscribe",
+        "doc_url": "https://fal.ai/models/fal-ai/qwen-image-edit-2511/api#schema",
+        "options": {
+            "prompt": {
+                "type": "prompt",
+                "default": None,
+                "help": "prompt text",
+                "file_help": "prompt file in prompts/",
+            },
+            "negative_prompt": {
+                "type": str,
+                "default": "",
+                "help": "negative prompt to steer away from unwanted details",
+                "flags": ["-n", "--negative-prompt"],
+            },
+            "image_size": {
+                "type": "whi",
+                "default": None,
+                "help": "preset image size",
+                "allowed_sizes": [
+                    "square_hd",
+                    "square",
+                    "portrait_4_3",
+                    "portrait_16_9",
+                    "landscape_4_3",
+                    "landscape_16_9",
+                ],
+                "flags": ["-i", "--image-size"],
             },
             "image_urls": {
                 "type": str,
@@ -1717,16 +1903,50 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "metavar": "URL",
                 "flags": ["--image-url", "--image-urls", "-u"],
             },
-            "negative_prompt": {
+            "num_inference_steps": {
+                "type": int,
+                "default": 28,
+                "help": "number of inference steps",
+            },
+            "guidance_scale": {
+                "type": float,
+                "default": 4.5,
+                "help": "guidance scale",
+            },
+            "seed": {
+                "type": int,
+                "default": None,
+                "help": "random seed (omit for random)",
+                "flags": ["-s", "--seed"],
+            },
+            "sync_mode": {
+                "type": bool,
+                "default": False,
+                "help": "return image data directly (synchronous mode)",
+                "disable_help": "disable synchronous mode",
+            },
+            "num_images": {
+                "type": int,
+                "default": 1,
+                "help": "number of images to generate",
+                "flags": ["-#", "--num-images"],
+            },
+            "enable_safety_checker": {
+                "type": bool,
+                "default": True,
+                "help": "enable the model safety checker",
+                "disable_help": "disable the model safety checker",
+                "flags": ["-%", "--enable-safety-checker"],
+            },
+            "output_format": {
                 "type": str,
-                "default": "",
-                "help": "negative prompt to steer away from unwanted details",
-                "flags": ["-n", "--negative-prompt"],
+                "default": "png",
+                "help": "output image format (jpeg, png, webp)",
             },
             "acceleration": {
                 "type": str,
                 "default": "regular",
-                "help": "acceleration preset",
+                "help": "acceleration preset (none, regular, high)",
             },
         },
     },
