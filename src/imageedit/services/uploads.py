@@ -17,7 +17,7 @@ from flask import current_app
 from imagegen.imagegen import upload_image
 
 
-class HttpClient(Protocol):
+class _HeadClient(Protocol):
     """Protocol for HTTP clients that support HEAD requests."""
 
     def head(self, url: str, timeout: float) -> httpx.Response: ...
@@ -135,7 +135,7 @@ def get_upload_history(*, db_path: Path | None = None) -> list[dict]:
 def prune_upload_history(
     *,
     db_path: Path | None = None,
-    http_client: HttpClient | None = None,
+    http_client: _HeadClient | None = None,
 ) -> None:
     """Check validity of all URLs in history and remove dead links."""
     db_path = _resolve_db_path(db_path)
