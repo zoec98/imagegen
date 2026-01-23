@@ -26,4 +26,3 @@ def configure_logging() -> None:
     )
     httpx_level = logging.WARNING if os.getenv("PYTEST_CURRENT_TEST") else logging.DEBUG
     logging.getLogger("httpx").setLevel(httpx_level)
-    logging.warn()
