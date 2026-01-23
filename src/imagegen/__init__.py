@@ -17,9 +17,9 @@ from .options import parse_args
 def main() -> None:
     """CLI entrypoint: parse argv, run inference, and persist image assets."""
 
+    parsed = parse_args(sys.argv[1:])
     configure_logging()
     logger = logging.getLogger(__name__)
-    parsed = parse_args(sys.argv[1:])
 
     try:
         from . import imagegen as imagegen_module
