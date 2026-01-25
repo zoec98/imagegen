@@ -18,6 +18,8 @@ from imagegen.imagegen import upload_image
 
 
 class _HeadClient(Protocol):
+    """Protocol for HTTP clients that support HEAD requests."""
+
     def head(self, url: str, timeout: float) -> httpx.Response: ...
 
 
