@@ -10,6 +10,9 @@ from imageedit.app import (
     create_app,
 )
 
+API_TOKEN_SECRET = "test-secret"
+API_TOKEN_ISSUER_KEY = "issuer-key"
+
 
 def _make_client(tmp_path: Path):
     prompts_dir = tmp_path / "prompts"
@@ -22,9 +25,27 @@ def _make_client(tmp_path: Path):
             "ASSETS_DIR": assets_dir,
             "STYLES_DIR": styles_dir,
             "STARTUP_MODEL": "seedream",
+            "API_AUTH_ENABLED": True,
+            "API_TOKEN_SECRET": API_TOKEN_SECRET,
+            "API_TOKEN_ISSUER_KEY": API_TOKEN_ISSUER_KEY,
+            "API_TOKEN_TTL_SECONDS": 3600,
         }
     )
     return app.test_client(), prompts_dir, styles_dir
+
+
+def _auth_headers(client):
+    response = client.post("/api/token", json={"key": API_TOKEN_ISSUER_KEY})
+    payload = response.get_json()
+    return {"Authorization": f"Bearer {payload['token']}"}
+
+
+def test_api_requires_token(tmp_path):
+    client, _, _ = _make_client(tmp_path)
+
+    response = client.get("/api/model-sizes/schnell")
+
+    assert response.status_code == 401
 
 
 def test_api_prompt_duplicate_creates_incremented_copy(tmp_path):
@@ -33,10 +54,12 @@ def test_api_prompt_duplicate_creates_incremented_copy(tmp_path):
     prompts_dir.mkdir(parents=True, exist_ok=True)
     (prompts_dir / "alpha.txt").write_text("alpha", encoding="utf-8")
     (prompts_dir / "alpha_copy.txt").write_text("alpha copy", encoding="utf-8")
+    headers = _auth_headers(client)
 
     response = client.post(
         "/api/duplicate-prompt",
         json={"name": "alpha", "text": "alpha"},
+        headers=headers,
     )
 
     assert response.get_json() == {"success": True, "duplicated_name": "alpha_copy"}
@@ -48,10 +71,12 @@ def test_api_prompt_duplicate_creates_incremented_copy(tmp_path):
 def test_api_style_crud_round_trip(tmp_path):
     # REVIEW: 2026-01-04 editor upgrade
     client, _, styles_dir = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
     save_response = client.post(
         "/api/save-style",
         json={"name": "style_one", "text": "style text"},
+        headers=headers,
     )
 
     assert save_response.get_json() == {"success": True, "saved_name": "style_one"}
@@ -59,10 +84,14 @@ def test_api_style_crud_round_trip(tmp_path):
     assert style_path.exists()
     assert style_path.read_text(encoding="utf-8") == "style text"
 
-    get_response = client.get("/api/style/style_one")
+    get_response = client.get("/api/style/style_one", headers=headers)
     assert get_response.get_json() == {"text": "style text"}
 
-    delete_response = client.post("/api/delete-style", json={"name": "style_one"})
+    delete_response = client.post(
+        "/api/delete-style",
+        json={"name": "style_one"},
+        headers=headers,
+    )
     assert delete_response.get_json() == {"success": True, "deleted_name": "style_one"}
     assert not style_path.exists()
 
@@ -72,10 +101,12 @@ def test_api_style_save_handles_name_collisions(tmp_path):
     client, _, styles_dir = _make_client(tmp_path)
     styles_dir.mkdir(parents=True, exist_ok=True)
     (styles_dir / "repeat.txt").write_text("first", encoding="utf-8")
+    headers = _auth_headers(client)
 
     response = client.post(
         "/api/save-style",
         json={"name": "repeat", "text": "second"},
+        headers=headers,
     )
 
     assert response.get_json() == {"success": True, "saved_name": "repeat_1"}
@@ -86,24 +117,28 @@ def test_api_style_save_handles_name_collisions(tmp_path):
 
 def test_api_rejects_invalid_prompt_names(tmp_path):
     client, _, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
     response = client.post(
         "/api/save-prompt",
         json={"name": "bad.txt", "text": "content"},
+        headers=headers,
     )
 
     assert response.status_code == 400
 
-    response = client.get("/api/prompt/.hidden")
+    response = client.get("/api/prompt/.hidden", headers=headers)
     assert response.status_code == 400
 
 
 def test_api_rejects_invalid_style_names(tmp_path):
     client, _, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
     response = client.post(
         "/api/save-style",
         json={"name": "../escape", "text": "content"},
+        headers=headers,
     )
 
     assert response.status_code == 400
@@ -112,8 +147,9 @@ def test_api_rejects_invalid_style_names(tmp_path):
 def test_api_model_sizes_reflects_registry_values(tmp_path):
     # REVIEW: 2026-01-04 editor upgrade
     client, _, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
-    response = client.get("/api/model-sizes/schnell")
+    response = client.get("/api/model-sizes/schnell", headers=headers)
     payload = response.get_json()
 
     assert payload["sizes"] == _get_allowed_sizes("schnell")
@@ -124,8 +160,9 @@ def test_api_model_sizes_reflects_registry_values(tmp_path):
 def test_api_model_sizes_flags_image_urls_support(tmp_path):
     # REVIEW: 2026-01-04 editor upgrade
     client, _, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
-    response = client.get("/api/model-sizes/flux-2-pro-edit")
+    response = client.get("/api/model-sizes/flux-2-pro-edit", headers=headers)
     payload = response.get_json()
 
     assert payload["supports_image_urls"] is True
@@ -134,9 +171,15 @@ def test_api_model_sizes_flags_image_urls_support(tmp_path):
 def test_api_upload_rejects_oversize_file(tmp_path, monkeypatch):
     monkeypatch.setenv("MAX_CONTENT_LENGTH", "512")
     client, _, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
     data = {"file": (io.BytesIO(b"a" * 1024), "too-big.png")}
-    response = client.post("/api/upload", data=data, content_type="multipart/form-data")
+    response = client.post(
+        "/api/upload",
+        data=data,
+        content_type="multipart/form-data",
+        headers=headers,
+    )
 
     assert response.status_code == 413
 
@@ -179,12 +222,13 @@ def test_api_upload_history_returns_entries(tmp_path):
     client, _, _ = _make_client(tmp_path)
     assets_dir = tmp_path / "assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
+    headers = _auth_headers(client)
 
     with client.application.app_context():
         save_upload_to_history("https://example.com/a.png", "a.png")
         save_upload_to_history("https://example.com/b.png", "b.png")
 
-    response = client.get("/api/upload-history")
+    response = client.get("/api/upload-history", headers=headers)
     payload = response.get_json()
 
     assert len(payload) == 2

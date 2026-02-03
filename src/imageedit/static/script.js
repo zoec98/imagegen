@@ -11,6 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
     initShortcuts();
 });
 
+function getApiToken() {
+    const meta = document.querySelector('meta[name="imageedit-api-token"]');
+    const metaToken = meta ? meta.getAttribute('content') : '';
+    return metaToken || localStorage.getItem('imageedit_api_token') || '';
+}
+
+function apiFetch(url, options = {}) {
+    const headers = new Headers(options.headers || {});
+    const token = getApiToken();
+    if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
+    }
+    return fetch(url, { ...options, headers });
+}
+
 /**
  * Initializes style modifier specific logic:
  * - Loading text on select
@@ -39,7 +54,7 @@ function initStyleControls() {
         }
 
         try {
-            const response = await fetch(`/api/style/${encodeURIComponent(name)}`);
+            const response = await apiFetch(`/api/style/${encodeURIComponent(name)}`);
             if (response.ok) {
                 const data = await response.json();
                 styleTextarea.value = data.text || '';
@@ -128,7 +143,7 @@ function initStyleControls() {
                     confirmBtn.disabled = true;
                     confirmBtn.textContent = 'Saving...';
 
-                    const response = await fetch('/api/save-style', {
+                    const response = await apiFetch('/api/save-style', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: name, text: textToSave })
@@ -189,7 +204,7 @@ function initStyleControls() {
                     confirmBtn.disabled = true;
                     confirmBtn.textContent = 'Deleting...';
 
-                    const response = await fetch('/api/delete-style', {
+                    const response = await apiFetch('/api/delete-style', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: name })
@@ -248,7 +263,7 @@ function initPromptControls() {
         if (!hasPromptOption(name)) return;
 
         try {
-            const response = await fetch(`/api/prompt/${encodeURIComponent(name)}`);
+            const response = await apiFetch(`/api/prompt/${encodeURIComponent(name)}`);
             if (response.ok) {
                 const data = await response.json();
                 promptTextarea.value = data.text || '';
@@ -327,7 +342,7 @@ function initPromptControls() {
                     confirmBtn.disabled = true;
                     confirmBtn.textContent = 'Saving...';
 
-                    const response = await fetch('/api/save-prompt', {
+                    const response = await apiFetch('/api/save-prompt', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: name, text: textToSave })
@@ -394,7 +409,7 @@ function initPromptControls() {
                     confirmBtn.disabled = true;
                     confirmBtn.textContent = 'Deleting...';
 
-                    const response = await fetch('/api/delete-prompt', {
+                    const response = await apiFetch('/api/delete-prompt', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: name })
@@ -443,7 +458,7 @@ function initPromptControls() {
                 duplicatePromptBtn.disabled = true;
                 duplicatePromptBtn.textContent = 'Duplicating...';
 
-                const response = await fetch('/api/duplicate-prompt', {
+                const response = await apiFetch('/api/duplicate-prompt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: name, text: text })
@@ -683,7 +698,7 @@ function initImageSourceControls() {
                 uploadBtn.textContent = 'Uploading...';
                 uploadBtn.disabled = true;
 
-                const response = await fetch('/api/upload', {
+                const response = await apiFetch('/api/upload', {
                     method: 'POST',
                     body: formData
                 });
@@ -725,7 +740,7 @@ function initImageSourceControls() {
 
     async function fetchUploadHistory() {
         try {
-            const response = await fetch('/api/upload-history');
+            const response = await apiFetch('/api/upload-history');
             if (response.ok) {
                 currentHistory = await response.json();
                 renderUploadHistory(currentHistory);
@@ -1024,7 +1039,7 @@ function initModelSizeSync() {
         if (!model) return;
 
         try {
-            const response = await fetch(`/api/model-sizes/${encodeURIComponent(model)}`);
+            const response = await apiFetch(`/api/model-sizes/${encodeURIComponent(model)}`);
             if (!response.ok) return;
 
             const data = await response.json();

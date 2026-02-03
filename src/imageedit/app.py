@@ -4,17 +4,27 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 import threading
 from pathlib import Path
 from typing import Any
 
+import click
 from dotenv import load_dotenv
 from flask import Flask
 
-from image_common.env import load_env_file, save_clean_copy_enabled
+from image_common.env import (
+    is_placeholder_value,
+    load_env_file,
+    read_env_values,
+    save_clean_copy_enabled,
+    set_env_values,
+    strip_env_quotes,
+)
 from image_common.logging import configure_logging
 from imagegen.registry import MODEL_REGISTRY
 
+from .services.auth import issue_api_token
 from .forms import (
     default_option,
     get_allowed_sizes,
@@ -46,10 +56,48 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     _set_configs(app)
     _init_storage_dirs(app)
     app.register_blueprint(routes_bp)
+    _register_cli(app)
 
     _start_prune_thread(app, logger)
 
     return app
+
+
+def _register_cli(app: Flask) -> None:
+    @app.cli.command("init-env")
+    def init_env() -> None:
+        """Ensure .env exists and seed imageedit API auth secrets."""
+        env_path = load_env_file(Path(".env"))
+        values = read_env_values(env_path)
+        updates: dict[str, str] = {}
+
+        auth_enabled = values.get("API_AUTH_ENABLED", "")
+        if not auth_enabled or is_placeholder_value(auth_enabled):
+            updates["API_AUTH_ENABLED"] = "true"
+
+        token_secret = values.get("API_TOKEN_SECRET", "")
+        if not token_secret or is_placeholder_value(token_secret):
+            token_secret = secrets.token_hex(32)
+            updates["API_TOKEN_SECRET"] = token_secret
+
+        issuer_key = values.get("API_TOKEN_ISSUER_KEY", "")
+        if not issuer_key or is_placeholder_value(issuer_key):
+            issuer_key = secrets.token_hex(32)
+            updates["API_TOKEN_ISSUER_KEY"] = issuer_key
+
+        browser_token = values.get("API_BROWSER_TOKEN", "")
+        if not browser_token or is_placeholder_value(browser_token):
+            secret_value = strip_env_quotes(token_secret)
+            updates["API_BROWSER_TOKEN"] = issue_api_token(
+                secret_value, subject="imageedit-ui"
+            )
+
+        set_env_values(env_path, updates)
+        if updates:
+            keys = ", ".join(sorted(updates.keys()))
+            click.echo(f"Updated .env with: {keys}")
+        else:
+            click.echo("No changes needed; .env already has API token values.")
 
 
 def _set_configs(app: Flask) -> None:
@@ -61,6 +109,33 @@ def _set_configs(app: Flask) -> None:
         )
     app.config["STARTUP_MODEL"] = startup_model
 
+    api_auth_enabled = _as_bool(
+        app.config.get("API_AUTH_ENABLED", os.getenv("API_AUTH_ENABLED", "true"))
+    )
+    api_token_secret = app.config.get(
+        "API_TOKEN_SECRET", os.getenv("API_TOKEN_SECRET", "")
+    )
+    api_token_issuer_key = app.config.get(
+        "API_TOKEN_ISSUER_KEY", os.getenv("API_TOKEN_ISSUER_KEY", "")
+    )
+    api_token_ttl = app.config.get(
+        "API_TOKEN_TTL_SECONDS", os.getenv("API_TOKEN_TTL_SECONDS", "3600")
+    )
+    api_browser_token = app.config.get(
+        "API_BROWSER_TOKEN", os.getenv("API_BROWSER_TOKEN", "")
+    )
+
+    app.config["API_AUTH_ENABLED"] = api_auth_enabled
+    app.config["API_TOKEN_SECRET"] = api_token_secret
+    app.config["API_TOKEN_ISSUER_KEY"] = api_token_issuer_key
+    app.config["API_TOKEN_TTL_SECONDS"] = int(api_token_ttl)
+    app.config["API_BROWSER_TOKEN"] = api_browser_token
+
+    if api_auth_enabled and (not api_token_secret or not api_token_issuer_key):
+        raise ValueError(
+            "API_TOKEN_SECRET and API_TOKEN_ISSUER_KEY must be set when API_AUTH_ENABLED is true."
+        )
+
     max_content_length = os.getenv("MAX_CONTENT_LENGTH")
     if max_content_length:
         try:
@@ -71,6 +146,14 @@ def _set_configs(app: Flask) -> None:
                 "Invalid MAX_CONTENT_LENGTH value: %r. Using Flask default.",
                 max_content_length,
             )
+
+
+def _as_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() not in {"0", "false", "no", "off"}
 
 
 def _start_prune_thread(app: Flask, logger: logging.Logger) -> None:

@@ -158,9 +158,13 @@ Features
 ```
 uv run flask --app imageedit.app run --debug
 ```
+- Seed the .env file with API auth secrets:
+```
+uv run flask --app imageedit.app init-env
+```
 - Or use the helper script (*DANGEROUS:* binds to 0.0.0.0:5002):
 ```
-./start_flask.sh
+./start_flask.sh  # this is intended for development only
 ```
 
 ### Environment and storage
@@ -170,10 +174,29 @@ uv run flask --app imageedit.app run --debug
 - Upload history and generation logs are stored in SQLite at `assets/imageedit.sqlite3`.
 
 ### Security considerations
-This Flask app has no authentication or network security.
-It is intended for localhost use or trusted networks only.
-If you bind to 0.0.0.0 (including `./start_flask.sh`), anyone on the network can access it.
-Treat it as a development tool unless you add your own protections.
+The Flask UI and API are protected by a signed token when API auth is enabled.
+By default, API auth is NOT enabled. Running `init-env` like so:
+
+``` 
+uv run flask --app imageedit.app init-env
+```
+will create a .env file or edit an existing .env file to turn on the authentication and create the necessary secrets.
+
+Configuration:
+- `API_AUTH_ENABLED` (default `false`): toggle API token enforcement for `/api/*`.
+  The `init-env` call will set that to `true`.
+- `API_TOKEN_SECRET`: secret used to sign and verify tokens (`init-env` generates this)
+- `API_TOKEN_ISSUER_KEY`: shared secret required to issue new tokens (`init-env` generates this)
+- `API_BROWSER_TOKEN` (optional): inject a pre-issued token into the UI for local dev (`init-env` generates this)
+- `API_TOKEN_TTL_SECONDS` (default `86400`): token lifetime.
+
+Token flow:
+- `POST /api/token` with JSON `{ "key": "<issuer key>" }` returns `{ "token": "...", "expires_in": 86400 }`.
+- Send `Authorization: Bearer <token>` on all `/api/*` requests.
+- For the browser UI, set `localStorage.imageedit_api_token` to a token or set `API_BROWSER_TOKEN` for local dev.
+
+If you bind to 0.0.0.0 (including `./start_flask.sh`), only do so on trusted networks,
+or add additional protections (reverse proxy auth, VPN, etc.).
 
 ---
 

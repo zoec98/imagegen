@@ -10,6 +10,9 @@ from imageedit.app import (
     create_app,
 )
 
+API_TOKEN_SECRET = "test-secret"
+API_TOKEN_ISSUER_KEY = "issuer-key"
+
 
 def _make_client(tmp_path: Path):
     prompts_dir = tmp_path / "prompts"
@@ -20,9 +23,19 @@ def _make_client(tmp_path: Path):
             "PROMPTS_DIR": prompts_dir,
             "ASSETS_DIR": assets_dir,
             "STARTUP_MODEL": "seedream",
+            "API_AUTH_ENABLED": True,
+            "API_TOKEN_SECRET": API_TOKEN_SECRET,
+            "API_TOKEN_ISSUER_KEY": API_TOKEN_ISSUER_KEY,
+            "API_TOKEN_TTL_SECONDS": 3600,
         }
     )
     return app.test_client(), prompts_dir, assets_dir
+
+
+def _auth_headers(client):
+    response = client.post("/api/token", json={"key": API_TOKEN_ISSUER_KEY})
+    payload = response.get_json()
+    return {"Authorization": f"Bearer {payload['token']}"}
 
 
 def test_lists_existing_prompts(tmp_path):
@@ -39,10 +52,12 @@ def test_lists_existing_prompts(tmp_path):
 def test_save_creates_or_updates_prompt(tmp_path):
     # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
     response = client.post(
         "/api/save-prompt",
         json={"name": "new_prompt", "text": "content"},
+        headers=headers,
     )
 
     saved_path = prompts_dir / "new_prompt.txt"
@@ -54,10 +69,12 @@ def test_save_creates_or_updates_prompt(tmp_path):
 def test_save_normalizes_newlines(tmp_path):
     # REVIEW: 2026-01-04 editor upgrade
     client, prompts_dir, _ = _make_client(tmp_path)
+    headers = _auth_headers(client)
 
     client.post(
         "/api/save-prompt",
         json={"name": "win", "text": "line1\r\nline2\rline3\nline4"},
+        headers=headers,
     )
 
     saved_path = prompts_dir / "win.txt"
@@ -69,8 +86,9 @@ def test_load_reads_existing_prompt(tmp_path):
     client, prompts_dir, _ = _make_client(tmp_path)
     prompts_dir.mkdir(parents=True, exist_ok=True)
     (prompts_dir / "beta.txt").write_text("beta content", encoding="utf-8")
+    headers = _auth_headers(client)
 
-    response = client.get("/api/prompt/beta")
+    response = client.get("/api/prompt/beta", headers=headers)
 
     assert response.get_json() == {"text": "beta content"}
 
@@ -81,8 +99,11 @@ def test_delete_removes_prompt(tmp_path):
     prompts_dir.mkdir(parents=True, exist_ok=True)
     target = prompts_dir / "gamma.txt"
     target.write_text("gamma", encoding="utf-8")
+    headers = _auth_headers(client)
 
-    response = client.post("/api/delete-prompt", json={"name": "gamma"})
+    response = client.post(
+        "/api/delete-prompt", json={"name": "gamma"}, headers=headers
+    )
 
     assert not target.exists()
     assert response.get_json() == {"success": True, "deleted_name": "gamma"}

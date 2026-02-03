@@ -38,6 +38,31 @@ CONFIG_REGISTRY: list[dict[str, Any]] = [
         "help_text": "imageedit startup model (must match a registry key).",
     },
     {
+        "key": "API_AUTH_ENABLED",
+        "default_value": "false",
+        "help_text": "Enable API token auth for imageedit (/api/* routes).",
+    },
+    {
+        "key": "API_TOKEN_SECRET",
+        "default_value": '"<set api token secret>"',
+        "help_text": "Secret used to sign and verify imageedit API tokens.",
+    },
+    {
+        "key": "API_TOKEN_ISSUER_KEY",
+        "default_value": '"<set api token issuer key>"',
+        "help_text": "Shared secret required to mint imageedit API tokens.",
+    },
+    {
+        "key": "API_TOKEN_TTL_SECONDS",
+        "default_value": "86400",
+        "help_text": "Lifetime for issued imageedit API tokens.",
+    },
+    {
+        "key": "API_BROWSER_TOKEN",
+        "default_value": '""',
+        "help_text": "Optional pre-issued token for the browser UI.",
+    },
+    {
         "key": "SAVE_CLEAN_COPY",
         "default_value": "on",
         "help_text": (
@@ -102,6 +127,66 @@ def load_env_file(env_path: Path | None = None) -> Path:
     target = env_path or Path(".env")
     ensure_env_file(target)
     return target
+
+
+def read_env_values(env_path: Path) -> dict[str, str]:
+    values: dict[str, str] = {}
+    if not env_path.exists():
+        return values
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        values[key.strip()] = value.strip()
+    return values
+
+
+def set_env_values(env_path: Path, updates: dict[str, str]) -> None:
+    if not updates:
+        return
+    existing = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
+    lines = existing.splitlines(keepends=True)
+    seen: set[str] = set()
+    new_lines: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            new_lines.append(line)
+            continue
+        key, _ = stripped.split("=", 1)
+        key = key.strip()
+        if key in updates:
+            new_lines.append(f"{key}={updates[key]}\n")
+            seen.add(key)
+        else:
+            new_lines.append(line)
+
+    for key, value in updates.items():
+        if key not in seen:
+            if new_lines and not new_lines[-1].endswith("\n"):
+                new_lines.append("\n")
+            new_lines.append(f"{key}={value}\n")
+
+    env_path.write_text("".join(new_lines), encoding="utf-8")
+
+
+def strip_env_quotes(value: str) -> str:
+    cleaned = value.strip()
+    if (
+        (cleaned.startswith('"') and cleaned.endswith('"'))
+        or (cleaned.startswith("'") and cleaned.endswith("'"))
+    ):
+        return cleaned[1:-1]
+    return cleaned
+
+
+def is_placeholder_value(value: str) -> bool:
+    normalized = strip_env_quotes(value).strip()
+    if not normalized:
+        return True
+    return normalized.startswith("<") and normalized.endswith(">")
 
 
 def save_clean_copy_enabled() -> bool:

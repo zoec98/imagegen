@@ -43,6 +43,7 @@ from .services.assets import (
     prompt_name_from_asset_filename,
     resolve_asset_path,
 )
+from .services.auth import issue_api_token, issuer_key_matches, verify_api_token
 from .services.generation import run_generation
 from .services.prompts import append_style_prompt, next_copy_name
 from .services.uploads import upload_local_image
@@ -53,6 +54,34 @@ _DISALLOWED_NAME_CHARS = {os.sep}
 if os.altsep:
     _DISALLOWED_NAME_CHARS.add(os.altsep)
 logger = logging.getLogger(__name__)
+
+
+@bp.before_request
+def _require_api_token():
+    if not current_app.config.get("API_AUTH_ENABLED", True):
+        return None
+    if not request.path.startswith("/api/"):
+        return None
+    if request.path == "/api/token":
+        return None
+
+    token = _get_api_token()
+    if not token:
+        return jsonify({"error": "Missing API token"}), 401
+
+    secret = current_app.config["API_TOKEN_SECRET"]
+    max_age = current_app.config["API_TOKEN_TTL_SECONDS"]
+    _, error = verify_api_token(token, secret, max_age=max_age)
+    if error:
+        return jsonify({"error": "Invalid API token"}), 401
+    return None
+
+
+def _get_api_token() -> str | None:
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        return auth_header.removeprefix("Bearer ").strip()
+    return request.headers.get("X-API-Token")
 
 
 def _validate_plain_name(raw_name: str) -> str | None:
@@ -66,6 +95,25 @@ def _validate_plain_name(raw_name: str) -> str | None:
     if "." in name:
         return None
     return name
+
+
+@bp.route("/api/token", methods=["POST"])
+def api_token():
+    """Issue a short-lived API token."""
+    data = request.json or {}
+    candidate = data.get("key")
+    expected = current_app.config["API_TOKEN_ISSUER_KEY"]
+    if not issuer_key_matches(candidate, expected):
+        return jsonify({"error": "Invalid issuer key"}), 401
+
+    subject = data.get("subject") or "imageedit"
+    token = issue_api_token(current_app.config["API_TOKEN_SECRET"], subject=subject)
+    return jsonify(
+        {
+            "token": token,
+            "expires_in": current_app.config["API_TOKEN_TTL_SECONDS"],
+        }
+    )
 
 
 @bp.route("/", methods=["GET", "POST"])
@@ -226,6 +274,7 @@ def index() -> str:
         gallery_width=gallery_width,
         gallery_height=gallery_height,
         gallery_entries=gallery_entries,
+        api_token=current_app.config.get("API_BROWSER_TOKEN", ""),
     )
 
 
