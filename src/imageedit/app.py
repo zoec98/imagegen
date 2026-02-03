@@ -43,7 +43,7 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     if config:
         app.config.update(config)
 
-    _set_startup_model(app)
+    _set_configs(app)
     _init_storage_dirs(app)
     app.register_blueprint(routes_bp)
 
@@ -52,7 +52,7 @@ def create_app(*, config: dict[str, Any] | None = None) -> Flask:
     return app
 
 
-def _set_startup_model(app: Flask) -> None:
+def _set_configs(app: Flask) -> None:
     startup_model = app.config.get("STARTUP_MODEL") or os.getenv("STARTUP_MODEL", "")
     if startup_model not in MODEL_REGISTRY:
         valid = ", ".join(sorted(MODEL_REGISTRY.keys()))
@@ -60,6 +60,17 @@ def _set_startup_model(app: Flask) -> None:
             f"STARTUP_MODEL must be one of: {valid}. Current value: {startup_model!r}"
         )
     app.config["STARTUP_MODEL"] = startup_model
+
+    max_content_length = os.getenv("MAX_CONTENT_LENGTH")
+    if max_content_length:
+        try:
+            app.config["MAX_CONTENT_LENGTH"] = int(max_content_length)
+        except ValueError:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "Invalid MAX_CONTENT_LENGTH value: %r. Using Flask default.",
+                max_content_length,
+            )
 
 
 def _start_prune_thread(app: Flask, logger: logging.Logger) -> None:

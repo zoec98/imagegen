@@ -457,13 +457,14 @@ def build_parser(
 
     for model_name in model_names:
         model_def = registry[model_name]
+        doc_url = model_def.get("doc_url", "")
         options = dict(model_def.get("options", {}))
-        description = f"endpoint: {model_def['endpoint']} | call: {model_def['call']}"
+        description = f"Endpoint: {model_def['endpoint']}"
         model_parser = subparsers.add_parser(
             model_name,
             add_help=False,
             help=description,
-            description=description,
+            description=f"Endpoint: {model_def['endpoint']} See also: {doc_url}",
             parents=[common_parser],
         )
         model_parser.add_argument(

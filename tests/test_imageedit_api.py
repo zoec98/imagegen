@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 from pathlib import Path
 
 from imageedit.app import (
@@ -128,6 +129,16 @@ def test_api_model_sizes_flags_image_urls_support(tmp_path):
     payload = response.get_json()
 
     assert payload["supports_image_urls"] is True
+
+
+def test_api_upload_rejects_oversize_file(tmp_path, monkeypatch):
+    monkeypatch.setenv("MAX_CONTENT_LENGTH", "512")
+    client, _, _ = _make_client(tmp_path)
+
+    data = {"file": (io.BytesIO(b"a" * 1024), "too-big.png")}
+    response = client.post("/api/upload", data=data, content_type="multipart/form-data")
+
+    assert response.status_code == 413
 
 
 def test_save_upload_to_history_persists_entry(tmp_path):
