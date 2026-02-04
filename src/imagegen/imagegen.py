@@ -378,7 +378,8 @@ def _apply_exif_metadata(path: Path, parsed: ParsedOptions) -> None:
 
 
 def _write_jpg(path: Path, data: bytes, options: Mapping[str, Any]) -> None:
-    with Image.open(BytesIO(data)) as img:
+    with Image.open(BytesIO(data)) as opened:
+        img: Image.Image = opened
         has_alpha = img.mode in {"RGBA", "LA"} or (
             img.mode == "P" and "transparency" in img.info
         )
