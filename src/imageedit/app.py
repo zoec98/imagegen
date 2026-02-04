@@ -24,7 +24,6 @@ from image_common.env import (
 from image_common.logging import configure_logging
 from imagegen.registry import MODEL_REGISTRY
 
-from .services.auth import issue_api_token
 from .forms import (
     default_option,
     get_allowed_sizes,
@@ -33,6 +32,7 @@ from .forms import (
 )
 from .routes import bp as routes_bp
 from .services.assets import prompt_name_from_asset_filename
+from .services.auth import issue_api_token
 from .services.prompts import next_copy_name
 
 

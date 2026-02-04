@@ -44,12 +44,12 @@ CONFIG_REGISTRY: list[dict[str, Any]] = [
     },
     {
         "key": "API_TOKEN_SECRET",
-        "default_value": '"<set api token secret>"',
+        "default_value": '"<set api token secret>"',  # noqa: S105
         "help_text": "Secret used to sign and verify imageedit API tokens.",
     },
     {
         "key": "API_TOKEN_ISSUER_KEY",
-        "default_value": '"<set api token issuer key>"',
+        "default_value": '"<set api token issuer key>"',  # noqa: S105
         "help_text": "Shared secret required to mint imageedit API tokens.",
     },
     {

@@ -10,8 +10,8 @@ from imageedit.app import (
     create_app,
 )
 
-API_TOKEN_SECRET = "test-secret"
-API_TOKEN_ISSUER_KEY = "issuer-key"
+API_TOKEN_SECRET = "test-secret"  # noqa: S105
+API_TOKEN_ISSUER_KEY = "issuer-key"  # noqa: S105
 
 
 def _make_client(tmp_path: Path):
