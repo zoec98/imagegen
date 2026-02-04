@@ -7,7 +7,7 @@ from typing import Any
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
-_TOKEN_SALT = "imageedit-api-token" # noqa: S105
+_TOKEN_SALT = "imageedit-api-token"  # noqa: S105
 
 
 def issue_api_token(secret: str, *, subject: str) -> str:

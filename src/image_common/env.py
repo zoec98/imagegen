@@ -174,9 +174,8 @@ def set_env_values(env_path: Path, updates: dict[str, str]) -> None:
 
 def strip_env_quotes(value: str) -> str:
     cleaned = value.strip()
-    if (
-        (cleaned.startswith('"') and cleaned.endswith('"'))
-        or (cleaned.startswith("'") and cleaned.endswith("'"))
+    if (cleaned.startswith('"') and cleaned.endswith('"')) or (
+        cleaned.startswith("'") and cleaned.endswith("'")
     ):
         return cleaned[1:-1]
     return cleaned
