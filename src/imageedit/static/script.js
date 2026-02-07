@@ -11,19 +11,29 @@ document.addEventListener('DOMContentLoaded', () => {
     initShortcuts();
 });
 
+const AUTH_RELOAD_GUARD_KEY = 'imageedit_api_auth_reload';
+
 function getApiToken() {
+    const storedToken = localStorage.getItem('imageedit_api_token') || '';
     const meta = document.querySelector('meta[name="imageedit-api-token"]');
     const metaToken = meta ? meta.getAttribute('content') : '';
-    return metaToken || localStorage.getItem('imageedit_api_token') || '';
+    return storedToken || metaToken || '';
 }
 
-function apiFetch(url, options = {}) {
+async function apiFetch(url, options = {}) {
     const headers = new Headers(options.headers || {});
     const token = getApiToken();
     if (token) {
         headers.set('Authorization', `Bearer ${token}`);
     }
-    return fetch(url, { ...options, headers });
+    const response = await fetch(url, { ...options, headers });
+    if (response.ok) {
+        sessionStorage.removeItem(AUTH_RELOAD_GUARD_KEY);
+    } else if (response.status === 401 && !sessionStorage.getItem(AUTH_RELOAD_GUARD_KEY)) {
+        sessionStorage.setItem(AUTH_RELOAD_GUARD_KEY, '1');
+        window.location.reload();
+    }
+    return response;
 }
 
 /**

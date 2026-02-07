@@ -19,7 +19,6 @@ from image_common.env import (
     read_env_values,
     save_clean_copy_enabled,
     set_env_values,
-    strip_env_quotes,
 )
 from image_common.logging import configure_logging
 from imagegen.registry import MODEL_REGISTRY
@@ -32,7 +31,6 @@ from .forms import (
 )
 from .routes import bp as routes_bp
 from .services.assets import prompt_name_from_asset_filename
-from .services.auth import issue_api_token
 from .services.prompts import next_copy_name
 
 
@@ -80,18 +78,6 @@ def _register_cli(app: Flask) -> None:
             token_secret = secrets.token_hex(32)
             updates["API_TOKEN_SECRET"] = token_secret
 
-        issuer_key = values.get("API_TOKEN_ISSUER_KEY", "")
-        if not issuer_key or is_placeholder_value(issuer_key):
-            issuer_key = secrets.token_hex(32)
-            updates["API_TOKEN_ISSUER_KEY"] = issuer_key
-
-        browser_token = values.get("API_BROWSER_TOKEN", "")
-        if not browser_token or is_placeholder_value(browser_token):
-            secret_value = strip_env_quotes(token_secret)
-            updates["API_BROWSER_TOKEN"] = issue_api_token(
-                secret_value, subject="imageedit-ui"
-            )
-
         set_env_values(env_path, updates)
         if updates:
             keys = ", ".join(sorted(updates.keys()))
@@ -115,26 +101,15 @@ def _set_configs(app: Flask) -> None:
     api_token_secret = app.config.get(
         "API_TOKEN_SECRET", os.getenv("API_TOKEN_SECRET", "")
     )
-    api_token_issuer_key = app.config.get(
-        "API_TOKEN_ISSUER_KEY", os.getenv("API_TOKEN_ISSUER_KEY", "")
-    )
     api_token_ttl = app.config.get(
-        "API_TOKEN_TTL_SECONDS", os.getenv("API_TOKEN_TTL_SECONDS", "3600")
+        "API_TOKEN_TTL_SECONDS", os.getenv("API_TOKEN_TTL_SECONDS", "86400")
     )
-    api_browser_token = app.config.get(
-        "API_BROWSER_TOKEN", os.getenv("API_BROWSER_TOKEN", "")
-    )
-
     app.config["API_AUTH_ENABLED"] = api_auth_enabled
     app.config["API_TOKEN_SECRET"] = api_token_secret
-    app.config["API_TOKEN_ISSUER_KEY"] = api_token_issuer_key
     app.config["API_TOKEN_TTL_SECONDS"] = int(api_token_ttl)
-    app.config["API_BROWSER_TOKEN"] = api_browser_token
 
-    if api_auth_enabled and (not api_token_secret or not api_token_issuer_key):
-        raise ValueError(
-            "API_TOKEN_SECRET and API_TOKEN_ISSUER_KEY must be set when API_AUTH_ENABLED is true."
-        )
+    if api_auth_enabled and not api_token_secret:
+        raise ValueError("API_TOKEN_SECRET must be set when API_AUTH_ENABLED is true.")
 
     max_content_length = os.getenv("MAX_CONTENT_LENGTH")
     if max_content_length:

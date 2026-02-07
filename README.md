@@ -186,14 +186,11 @@ Configuration:
 - `API_AUTH_ENABLED` (default `false`): toggle API token enforcement for `/api/*`.
   The `init-env` call will set that to `true`.
 - `API_TOKEN_SECRET`: secret used to sign and verify tokens (`init-env` generates this)
-- `API_TOKEN_ISSUER_KEY`: shared secret required to issue new tokens (`init-env` generates this)
-- `API_BROWSER_TOKEN` (optional): inject a pre-issued token into the UI for local dev (`init-env` generates this)
 - `API_TOKEN_TTL_SECONDS` (default `86400`): token lifetime.
 
 Token flow:
-- `POST /api/token` with JSON `{ "key": "<issuer key>" }` returns `{ "token": "...", "expires_in": 86400 }`.
-- Send `Authorization: Bearer <token>` on all `/api/*` requests.
-- For the browser UI, set `localStorage.imageedit_api_token` to a token or set `API_BROWSER_TOKEN` for local dev.
+- Browser UI pages include a freshly signed token in HTML for API calls.
+- You can optionally override this by setting `localStorage.imageedit_api_token` in the browser.
 
 If you bind to 0.0.0.0 (including `./start_flask.sh`), only do so on trusted networks,
 or add additional protections (reverse proxy auth, VPN, etc.).

@@ -43,7 +43,7 @@ from .services.assets import (
     prompt_name_from_asset_filename,
     resolve_asset_path,
 )
-from .services.auth import issue_api_token, issuer_key_matches, verify_api_token
+from .services.auth import issue_api_token, verify_api_token
 from .services.generation import run_generation
 from .services.prompts import append_style_prompt, next_copy_name
 from .services.uploads import upload_local_image
@@ -62,9 +62,6 @@ def _require_api_token():
         return None
     if not request.path.startswith("/api/"):
         return None
-    if request.path == "/api/token":
-        return None
-
     token = _get_api_token()
     if not token:
         return jsonify({"error": "Missing API token"}), 401
@@ -97,23 +94,13 @@ def _validate_plain_name(raw_name: str) -> str | None:
     return name
 
 
-@bp.route("/api/token", methods=["POST"])
-def api_token():
-    """Issue a short-lived API token."""
-    data = request.json or {}
-    candidate = data.get("key")
-    expected = current_app.config["API_TOKEN_ISSUER_KEY"]
-    if not issuer_key_matches(candidate, expected):
-        return jsonify({"error": "Invalid issuer key"}), 401
-
-    subject = data.get("subject") or "imageedit"
-    token = issue_api_token(current_app.config["API_TOKEN_SECRET"], subject=subject)
-    return jsonify(
-        {
-            "token": token,
-            "expires_in": current_app.config["API_TOKEN_TTL_SECONDS"],
-        }
-    )
+def _browser_api_token() -> str:
+    if not current_app.config.get("API_AUTH_ENABLED", True):
+        return ""
+    secret = current_app.config.get("API_TOKEN_SECRET", "")
+    if not secret:
+        return ""
+    return issue_api_token(secret, subject="imageedit-ui")
 
 
 @bp.route("/", methods=["GET", "POST"])
@@ -274,7 +261,7 @@ def index() -> str:
         gallery_width=gallery_width,
         gallery_height=gallery_height,
         gallery_entries=gallery_entries,
-        api_token=current_app.config.get("API_BROWSER_TOKEN", ""),
+        api_token=_browser_api_token(),
     )
 
 

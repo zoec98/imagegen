@@ -48,19 +48,9 @@ CONFIG_REGISTRY: list[dict[str, Any]] = [
         "help_text": "Secret used to sign and verify imageedit API tokens.",
     },
     {
-        "key": "API_TOKEN_ISSUER_KEY",
-        "default_value": '"<set api token issuer key>"',  # noqa: S105
-        "help_text": "Shared secret required to mint imageedit API tokens.",
-    },
-    {
         "key": "API_TOKEN_TTL_SECONDS",
         "default_value": "86400",
         "help_text": "Lifetime for issued imageedit API tokens.",
-    },
-    {
-        "key": "API_BROWSER_TOKEN",
-        "default_value": '""',
-        "help_text": "Optional pre-issued token for the browser UI.",
     },
     {
         "key": "SAVE_CLEAN_COPY",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from pathlib import Path
 
 from imageedit.app import (
@@ -9,9 +10,9 @@ from imageedit.app import (
     _model_supports_image_urls,
     create_app,
 )
+from imageedit.services.auth import issue_api_token
 
 API_TOKEN_SECRET = "test-secret"  # noqa: S105
-API_TOKEN_ISSUER_KEY = "issuer-key"  # noqa: S105
 
 
 def _make_client(tmp_path: Path):
@@ -27,7 +28,6 @@ def _make_client(tmp_path: Path):
             "STARTUP_MODEL": "seedream",
             "API_AUTH_ENABLED": True,
             "API_TOKEN_SECRET": API_TOKEN_SECRET,
-            "API_TOKEN_ISSUER_KEY": API_TOKEN_ISSUER_KEY,
             "API_TOKEN_TTL_SECONDS": 3600,
         }
     )
@@ -35,9 +35,16 @@ def _make_client(tmp_path: Path):
 
 
 def _auth_headers(client):
-    response = client.post("/api/token", json={"key": API_TOKEN_ISSUER_KEY})
-    payload = response.get_json()
-    return {"Authorization": f"Bearer {payload['token']}"}
+    token = issue_api_token(API_TOKEN_SECRET, subject="test-client")
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _index_meta_token(response_text: str) -> str:
+    match = re.search(
+        r'<meta name="imageedit-api-token" content="([^"]*)">', response_text
+    )
+    assert match is not None
+    return match.group(1)
 
 
 def test_api_requires_token(tmp_path):
@@ -46,6 +53,55 @@ def test_api_requires_token(tmp_path):
     response = client.get("/api/model-sizes/schnell")
 
     assert response.status_code == 401
+
+
+def test_index_issues_browser_token_for_api_calls(tmp_path):
+    prompts_dir = tmp_path / "prompts"
+    assets_dir = tmp_path / "assets"
+    styles_dir = tmp_path / "styles"
+    app = create_app(
+        config={
+            "TESTING": True,
+            "PROMPTS_DIR": prompts_dir,
+            "ASSETS_DIR": assets_dir,
+            "STYLES_DIR": styles_dir,
+            "STARTUP_MODEL": "seedream",
+            "API_AUTH_ENABLED": True,
+            "API_TOKEN_SECRET": API_TOKEN_SECRET,
+            "API_TOKEN_TTL_SECONDS": 3600,
+        }
+    )
+    client = app.test_client()
+
+    index_response = client.get("/")
+    token = _index_meta_token(index_response.get_data(as_text=True))
+    assert token
+
+    api_response = client.get(
+        "/api/model-sizes/schnell", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert api_response.status_code == 200
+
+
+def test_index_omits_browser_token_when_api_auth_disabled(tmp_path):
+    prompts_dir = tmp_path / "prompts"
+    assets_dir = tmp_path / "assets"
+    styles_dir = tmp_path / "styles"
+    app = create_app(
+        config={
+            "TESTING": True,
+            "PROMPTS_DIR": prompts_dir,
+            "ASSETS_DIR": assets_dir,
+            "STYLES_DIR": styles_dir,
+            "STARTUP_MODEL": "seedream",
+            "API_AUTH_ENABLED": False,
+        }
+    )
+    client = app.test_client()
+
+    index_response = client.get("/")
+    token = _index_meta_token(index_response.get_data(as_text=True))
+    assert token == ""
 
 
 def test_api_prompt_duplicate_creates_incremented_copy(tmp_path):

@@ -9,9 +9,9 @@ from imageedit.app import (
     _prompt_name_from_asset_filename,
     create_app,
 )
+from imageedit.services.auth import issue_api_token
 
 API_TOKEN_SECRET = "test-secret"  # noqa: S105
-API_TOKEN_ISSUER_KEY = "issuer-key"  # noqa: S105
 
 
 def _make_client(tmp_path: Path):
@@ -25,7 +25,6 @@ def _make_client(tmp_path: Path):
             "STARTUP_MODEL": "seedream",
             "API_AUTH_ENABLED": True,
             "API_TOKEN_SECRET": API_TOKEN_SECRET,
-            "API_TOKEN_ISSUER_KEY": API_TOKEN_ISSUER_KEY,
             "API_TOKEN_TTL_SECONDS": 3600,
         }
     )
@@ -33,9 +32,8 @@ def _make_client(tmp_path: Path):
 
 
 def _auth_headers(client):
-    response = client.post("/api/token", json={"key": API_TOKEN_ISSUER_KEY})
-    payload = response.get_json()
-    return {"Authorization": f"Bearer {payload['token']}"}
+    token = issue_api_token(API_TOKEN_SECRET, subject="test-client")
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_lists_existing_prompts(tmp_path):

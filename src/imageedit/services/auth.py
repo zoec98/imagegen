@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import secrets
 from typing import Any
 
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
@@ -30,9 +29,3 @@ def verify_api_token(
         return None, "invalid"
 
     return data, None
-
-
-def issuer_key_matches(candidate: str | None, expected: str) -> bool:
-    if not candidate:
-        return False
-    return secrets.compare_digest(candidate, expected)
