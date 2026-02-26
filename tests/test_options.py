@@ -141,6 +141,35 @@ def test_parser_does_not_require_common_keys():
                 },
             },
         ),
+        (
+            ["seedream5", "-p", "hi"],
+            {
+                "model": "seedream5",
+                "params": {
+                    "prompt": "hi",
+                    "image_size": "auto_2K",
+                    "num_images": 1,
+                    "max_images": 1,
+                    "enable_safety_checker": True,
+                    "sync_mode": False,
+                },
+            },
+        ),
+        (
+            ["seedream5-edit", "-p", "hi", "--image-url", "https://example.com/src.png"],
+            {
+                "model": "seedream5-edit",
+                "params": {
+                    "prompt": "hi",
+                    "image_size": "auto_2K",
+                    "num_images": 1,
+                    "max_images": 1,
+                    "enable_safety_checker": True,
+                    "sync_mode": False,
+                    "image_urls": ["https://example.com/src.png"],
+                },
+            },
+        ),
     ],
 )
 def test_parse_basic(argv, expected):
