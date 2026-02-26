@@ -1626,7 +1626,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
             },
             "enable_safety_checker": {
                 "type": bool,
-                "default": True,
+                "default": False,
                 "help": "enable the model safety checker",
                 "disable_help": "disable the model safety checker",
                 "flags": ["-%", "--enable-safety-checker"],
@@ -1698,7 +1698,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
             },
             "enable_safety_checker": {
                 "type": bool,
-                "default": True,
+                "default": False,
                 "help": "enable the model safety checker",
                 "disable_help": "disable the model safety checker",
                 "flags": ["-%", "--enable-safety-checker"],
