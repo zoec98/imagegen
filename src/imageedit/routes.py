@@ -283,6 +283,37 @@ def asset(filename: str):
     return send_from_directory(str(assets_dir), filename)
 
 
+@bp.route("/api/upload-asset", methods=["POST"])
+def api_upload_asset():
+    """Upload a previously generated asset to fal cloud."""
+    data = request.json
+    if not data or "filename" not in data:
+        return jsonify({"error": "Missing filename"}), 400
+
+    filename = data["filename"]
+    if ".." in filename or filename.startswith("/"):
+        return jsonify({"error": "Invalid filename"}), 400
+
+    assets_dir = Path(current_app.config["ASSETS_DIR"])
+    asset_path = resolve_asset_path(assets_dir, filename)
+
+    if not asset_path or not asset_path.exists():
+        return jsonify({"error": f"Asset '{filename}' not found"}), 404
+
+    try:
+        from .services.uploads import save_upload_to_history, upload_asset_image
+
+        url = upload_asset_image(asset_path)
+
+        save_upload_to_history(url, filename)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"url": url})
+
+
 @bp.route("/api/upload", methods=["POST"])
 def api_upload():
     """Handle local image upload to fal cloud."""
