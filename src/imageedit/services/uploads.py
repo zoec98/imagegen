@@ -13,6 +13,7 @@ from typing import Protocol
 
 import httpx
 from flask import current_app
+from PIL import Image
 
 from imagegen.imagegen import upload_image
 
@@ -21,17 +22,35 @@ class _HeadClient(Protocol):
     def head(self, url: str, timeout: float) -> httpx.Response: ...
 
 
+def _strip_exif_and_upload(image: Image.Image, filename: str) -> str:
+    """Save an image to a temporary file without EXIF data and upload it."""
+    suffix = Path(filename).suffix
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir) / f"upload{suffix}"
+
+        # Create a clean copy without metadata
+        clean_img = image.copy()
+
+        if "exif" in clean_img.info:
+            del clean_img.info["exif"]
+
+        clean_img.save(temp_path)
+        return upload_image(temp_path)
+
+
 def upload_local_image(file) -> str:
     if not file:
         raise ValueError("No file provided")
     if not file.filename:
         raise ValueError("No file selected")
 
-    suffix = Path(file.filename).suffix
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir) / f"upload{suffix}"
-        file.save(temp_path)
-        return upload_image(temp_path)
+    with Image.open(file) as img:
+        return _strip_exif_and_upload(img, file.filename)
+
+
+def upload_asset_image(asset_path: Path) -> str:
+    with Image.open(asset_path) as img:
+        return _strip_exif_and_upload(img, asset_path.name)
 
 
 def _resolve_db_path(db_path: Path | None) -> Path:

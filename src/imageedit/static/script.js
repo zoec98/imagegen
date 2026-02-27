@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initImageSourceControls();
     initPromptControls();
     initShortcuts();
+    initUploadAssetBtns();
 });
 
 const AUTH_RELOAD_GUARD_KEY = 'imageedit_api_auth_reload';
@@ -1063,6 +1064,18 @@ function initModelSizeSync() {
                 urlsGroup.style.display = supportsUrls ? 'block' : 'none';
             }
 
+            // Enable/disable Upload buttons based on whether the model
+            // supports images or has an -edit variant available
+            const hasEditVariant = !model.endsWith('-edit') &&
+                !!modelSelect.querySelector(`option[value="${model}-edit"]`);
+            const canUpload = supportsUrls || hasEditVariant;
+            document.querySelectorAll('.upload-asset-btn').forEach(btn => {
+                btn.disabled = !canUpload;
+                btn.title = canUpload
+                    ? 'Upload this image and switch to an edit model.'
+                    : 'No edit model available for the current selection.';
+            });
+
             // Clear existing options
             sizeSelect.innerHTML = '';
 
@@ -1081,6 +1094,91 @@ function initModelSizeSync() {
 
         } catch (err) {
             console.error('Failed to fetch model sizes:', err);
+        }
+    });
+}
+
+function initUploadAssetBtns() {
+    // Set initial disabled state based on the model selected at page load
+    const modelSelect = document.getElementById('model-name');
+    if (modelSelect) {
+        const model = modelSelect.value;
+        const urlsGroup = document.getElementById('image-urls-group');
+        const supportsUrls = urlsGroup && urlsGroup.style.display !== 'none';
+        const hasEditVariant = !model.endsWith('-edit') &&
+            !!modelSelect.querySelector(`option[value="${model}-edit"]`);
+        const canUpload = supportsUrls || hasEditVariant;
+        document.querySelectorAll('.upload-asset-btn').forEach(btn => {
+            btn.disabled = !canUpload;
+            btn.title = canUpload
+                ? 'Upload this image and switch to an edit model.'
+                : 'No edit model available for the current selection.';
+        });
+    }
+
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.upload-asset-btn');
+        if (!btn) return;
+        e.preventDefault();
+
+        const filename = btn.getAttribute('data-filename');
+        if (!filename) return;
+
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = 'Uploading…';
+
+        try {
+            const response = await apiFetch('/api/upload-asset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                // Switch to the edit variant of the current model if available
+                const modelSelect = document.getElementById('model-name');
+                if (modelSelect) {
+                    const currentModel = modelSelect.value;
+                    if (!currentModel.endsWith('-edit')) {
+                        const editVariant = currentModel + '-edit';
+                        const editOption = modelSelect.querySelector(`option[value="${editVariant}"]`);
+                        if (editOption) {
+                            modelSelect.value = editVariant;
+                            modelSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                            // Small delay to let the model change handler show the URL group
+                            await new Promise(r => setTimeout(r, 300));
+                        }
+                    }
+                }
+
+                const urlsTextarea = document.getElementById('image-urls');
+                if (urlsTextarea) {
+                    const currentVal = urlsTextarea.value.trim();
+                    if (currentVal) {
+                        urlsTextarea.value = currentVal + '\n' + data.url;
+                    } else {
+                        urlsTextarea.value = data.url;
+                    }
+                    urlsTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                    urlsTextarea.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
+                btn.textContent = 'Done ✓';
+                setTimeout(() => { btn.textContent = originalText; }, 1500);
+            } else {
+                const error = await response.json();
+                alert('Upload failed: ' + (error.error || 'Unknown error'));
+                btn.textContent = originalText;
+            }
+        } catch (err) {
+            console.error('Error uploading asset:', err);
+            alert('Error uploading asset.');
+            btn.textContent = originalText;
+        } finally {
+            btn.disabled = false;
         }
     });
 }

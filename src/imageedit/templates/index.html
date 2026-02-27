@@ -218,6 +218,8 @@
                   Params</button>
                 <button type="submit" name="action" value="asset_delete" class="danger"
                   data-confirm="Delete this asset?" title="Delete this generated asset.">Delete</button>
+                <button type="button" class="upload-asset-btn" data-filename="{{ entry.filename }}"
+                  title="Upload this image and switch to an edit model.">Upload</button>
               </form>
             </div>
           </div>
@@ -261,6 +263,8 @@
                   title="Load this asset's prompt parameters.">Load</button>
                 <button type="submit" name="action" value="asset_delete" class="danger"
                   data-confirm="Delete this asset?" title="Delete this asset from the library.">Delete</button>
+                <button type="button" class="upload-asset-btn" data-filename="{{ entry.filename }}"
+                  title="Upload this image and switch to an edit model.">Upload</button>
               </form>
             </div>
           </div>

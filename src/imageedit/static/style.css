@@ -311,6 +311,11 @@ button.danger:hover {
     padding: 0.5rem;
 }
 
+.asset-actions button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
 /* Utilities */
 .checkbox-label {
     flex-direction: row;
