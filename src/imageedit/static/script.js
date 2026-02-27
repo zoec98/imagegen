@@ -1064,16 +1064,13 @@ function initModelSizeSync() {
                 urlsGroup.style.display = supportsUrls ? 'block' : 'none';
             }
 
-            // Enable/disable Upload buttons based on whether the model
-            // supports images or has an -edit variant available
-            const hasEditVariant = !model.endsWith('-edit') &&
-                !!modelSelect.querySelector(`option[value="${model}-edit"]`);
-            const canUpload = supportsUrls || hasEditVariant;
+            // Enable/disable Upload buttons based on whether the current model supports images
+            const canUpload = supportsUrls;
             document.querySelectorAll('.upload-asset-btn').forEach(btn => {
                 btn.disabled = !canUpload;
                 btn.title = canUpload
-                    ? 'Upload this image and switch to an edit model.'
-                    : 'No edit model available for the current selection.';
+                    ? 'Upload this image.'
+                    : 'The current model does not support image inputs.';
             });
 
             // Clear existing options
@@ -1105,14 +1102,12 @@ function initUploadAssetBtns() {
         const model = modelSelect.value;
         const urlsGroup = document.getElementById('image-urls-group');
         const supportsUrls = urlsGroup && urlsGroup.style.display !== 'none';
-        const hasEditVariant = !model.endsWith('-edit') &&
-            !!modelSelect.querySelector(`option[value="${model}-edit"]`);
-        const canUpload = supportsUrls || hasEditVariant;
+        const canUpload = supportsUrls;
         document.querySelectorAll('.upload-asset-btn').forEach(btn => {
             btn.disabled = !canUpload;
             btn.title = canUpload
-                ? 'Upload this image and switch to an edit model.'
-                : 'No edit model available for the current selection.';
+                ? 'Upload this image.'
+                : 'The current model does not support image inputs.';
         });
     }
 
