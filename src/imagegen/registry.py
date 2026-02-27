@@ -1191,11 +1191,11 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
             },
         },
     },
-    # Nano Banana Gemini-enabled model
-    "nano-banana": {
-        "endpoint": "fal-ai/nano-banana",
+    # Nano Banana 2 text-to-image
+    "nano-banana-2": {
+        "endpoint": "fal-ai/nano-banana-2",
         "call": "subscribe",
-        "doc_url": "https://fal.ai/models/fal-ai/nano-banana/api#schema",
+        "doc_url": "https://fal.ai/models/fal-ai/nano-banana-2/api",
         "options": {
             "prompt": {
                 "type": "prompt",
@@ -1209,54 +1209,18 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "help": "number of images to generate",
                 "flags": ["-#", "--num-images"],
             },
-            "output_format": {
-                "type": str,
-                "default": "jpeg",
-                "help": "output image format (jpeg, png, webp)",
-            },
-            "image_size": {
-                "type": "i",
-                "allowed_sizes": [
-                    "21:9",
-                    "16:9",
-                    "3:2",
-                    "4:3",
-                    "5:4",
-                    "1:1",
-                    "4:5",
-                    "3:4",
-                    "2:3",
-                    "9:16",
-                ],
-                "default": "1:1",
-                "help": "aspect ratio preset",
-                "flags": ["-i", "--image-size"],
-            },
-        },
-    },
-    # Nano Banana Pro adds resolution and sync toggles
-    "nano-banana-pro": {
-        "endpoint": "fal-ai/nano-banana-pro",
-        "call": "subscribe",
-        "doc_url": "https://fal.ai/models/fal-ai/nano-banana-pro/api#schema",
-        "options": {
-            "prompt": {
-                "type": "prompt",
-                "default": None,
-                "help": "prompt text",
-                "file_help": "prompt file in prompts/",
-            },
-            "num_images": {
+            "seed": {
                 "type": int,
-                "default": 1,
-                "help": "number of images to generate",
-                "flags": ["-#", "--num-images"],
+                "default": None,
+                "help": "random seed (omit for random)",
+                "flags": ["-s", "--seed"],
             },
             "aspect_ratio": {
                 "type": "i",
-                "default": "1:1",
+                "default": "auto",
                 "help": "aspect ratio preset",
                 "allowed_sizes": [
+                    "auto",
                     "21:9",
                     "16:9",
                     "3:2",
@@ -1274,25 +1238,42 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "type": str,
                 "default": "png",
                 "help": "output image format (jpeg, png, webp)",
+            },
+            "safety_tolerance": {
+                "type": str,
+                "default": "6",
+                "help": "safety tolerance level (1-6, higher is less strict)",
+            },
+            "sync_mode": {
+                "type": bool,
+                "default": False,
+                "help": "return media as data URI (synchronous mode)",
+                "disable_help": "disable synchronous mode",
             },
             "resolution": {
                 "type": str,
                 "default": "1K",
-                "help": "target resolution preset (1K, 2K, 4K)",
+                "help": "target resolution preset (0.5K, 1K, 2K, 4K)",
             },
-            "sync_mode": {
+            "limit_generations": {
+                "type": bool,
+                "default": True,
+                "help": "limit generations per prompt round to one",
+                "disable_help": "allow multiple generations per round",
+            },
+            "enable_web_search": {
                 "type": bool,
                 "default": False,
-                "help": "return media as data URI (synchronous mode)",
-                "disable_help": "disable synchronous mode",
+                "help": "enable web search for image generation",
+                "disable_help": "disable web search for image generation",
             },
         },
     },
-    # Nano Banana Edit supports multi-image editing flows
-    "nano-banana-edit": {
-        "endpoint": "fal-ai/nano-banana/edit",
+    # Nano Banana 2 image editing
+    "nano-banana-2-edit": {
+        "endpoint": "fal-ai/nano-banana-2/edit",
         "call": "subscribe",
-        "doc_url": "https://fal.ai/models/fal-ai/nano-banana/edit/api#schema",
+        "doc_url": "https://fal.ai/models/fal-ai/nano-banana-2/edit/api",
         "options": {
             "prompt": {
                 "type": "prompt",
@@ -1306,8 +1287,14 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "help": "number of images to generate",
                 "flags": ["-#", "--num-images"],
             },
+            "seed": {
+                "type": int,
+                "default": None,
+                "help": "random seed (omit for random)",
+                "flags": ["-s", "--seed"],
+            },
             "aspect_ratio": {
-                "type": str,
+                "type": "i",
                 "default": "auto",
                 "help": "aspect ratio preset",
                 "allowed_sizes": [
@@ -1330,69 +1317,10 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "default": "png",
                 "help": "output image format (jpeg, png, webp)",
             },
-            "sync_mode": {
-                "type": bool,
-                "default": False,
-                "help": "return media as data URI (synchronous mode)",
-                "disable_help": "disable synchronous mode",
-            },
-            "image_urls": {
+            "safety_tolerance": {
                 "type": str,
-                "default": None,
-                "help": "image URL input (repeatable)",
-                "flags": ["--image-url", "--image-urls", "-u"],
-                "action": "append",
-                "metavar": "URL",
-            },
-            "limit_generations": {
-                "type": bool,
-                "default": False,
-                "help": "limit generations per prompt round to one",
-                "disable_help": "allow multiple generations per round",
-            },
-        },
-    },
-    # Nano Banana Pro Edit mirrors edit schema for pro tier
-    "nano-banana-pro-edit": {
-        "endpoint": "fal-ai/nano-banana/edit",
-        "call": "subscribe",
-        "doc_url": "https://fal.ai/models/fal-ai/nano-banana/edit/api#schema",
-        "options": {
-            "prompt": {
-                "type": "prompt",
-                "default": None,
-                "help": "prompt text",
-                "file_help": "prompt file in prompts/",
-            },
-            "num_images": {
-                "type": int,
-                "default": 1,
-                "help": "number of images to generate",
-                "flags": ["-#", "--num-images"],
-            },
-            "aspect_ratio": {
-                "type": str,
-                "default": "auto",
-                "help": "aspect ratio preset",
-                "allowed_sizes": [
-                    "auto",
-                    "21:9",
-                    "16:9",
-                    "3:2",
-                    "4:3",
-                    "5:4",
-                    "1:1",
-                    "4:5",
-                    "3:4",
-                    "2:3",
-                    "9:16",
-                ],
-                "flags": ["-i", "--aspect-ratio"],
-            },
-            "output_format": {
-                "type": str,
-                "default": "png",
-                "help": "output image format (jpeg, png, webp)",
+                "default": "4",
+                "help": "safety tolerance level (1-6, higher is less strict)",
             },
             "sync_mode": {
                 "type": bool,
@@ -1408,11 +1336,22 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
                 "action": "append",
                 "metavar": "URL",
             },
+            "resolution": {
+                "type": str,
+                "default": "1K",
+                "help": "target resolution preset (0.5K, 1K, 2K, 4K)",
+            },
             "limit_generations": {
                 "type": bool,
-                "default": False,
+                "default": True,
                 "help": "limit generations per prompt round to one",
                 "disable_help": "allow multiple generations per round",
+            },
+            "enable_web_search": {
+                "type": bool,
+                "default": False,
+                "help": "enable web search for image generation",
+                "disable_help": "disable web search for image generation",
             },
         },
     },
