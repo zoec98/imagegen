@@ -353,8 +353,14 @@ def api_model_sizes(model: str):
     sizes = get_allowed_sizes(model)
     default = default_option(model, "image_size")
     supports_urls = model_supports_image_urls(model)
+    input_mode = image_input_mode(model)
     return jsonify(
-        {"sizes": sizes, "default": default, "supports_image_urls": supports_urls}
+        {
+            "sizes": sizes,
+            "default": default,
+            "supports_image_urls": supports_urls,
+            "image_input_mode": input_mode,
+        }
     )
 
 

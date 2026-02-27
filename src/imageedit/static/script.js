@@ -1057,11 +1057,13 @@ function initModelSizeSync() {
             const sizes = data.sizes || [];
             const defaultSize = data.default || '';
             const supportsUrls = data.supports_image_urls;
+            const inputMode = data.image_input_mode || 'none';
 
-            // Toggle URL input visibility
+            // Toggle URL input visibility and update validation mode
             const urlsGroup = document.getElementById('image-urls-group');
             if (urlsGroup) {
                 urlsGroup.style.display = supportsUrls ? 'block' : 'none';
+                urlsGroup.dataset.inputMode = inputMode;
             }
 
             // Enable/disable Upload buttons based on whether the model
