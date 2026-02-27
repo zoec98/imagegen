@@ -148,6 +148,14 @@
           </label>
         </div>
 
+        <div class="control-group">
+          <label for="mini-cli"
+            style="font-size: 0.85em; font-weight: 500; margin-bottom: 0.25rem; display: block;">Mini CLI Args</label>
+          <input type="text" id="mini-cli" name="mini_cli" value="{{ mini_cli }}"
+            placeholder="e.g. --seed 42 --num-images 2" title="Pass extra CLI arguments directly to the model."
+            style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-family: monospace;">
+        </div>
+
         <!-- Hidden button for style append logic -->
         <button type="submit" name="action" value="append_style" id="append-style-button"
           style="display:none;">Append</button>

@@ -136,6 +136,7 @@ def index() -> str:
         request.form.getlist("include_prompt_metadata"), default=True
     )
     image_urls_text = request.form.get("image_urls", "")
+    mini_cli = request.form.get("mini_cli", "")
     input_mode = image_input_mode(selected_model)
     supports_image_urls = input_mode != "none"
     gallery_width = parse_gallery_width(
@@ -214,6 +215,7 @@ def index() -> str:
                         image_urls=image_urls_text if supports_image_urls else "",
                         image_input_mode=input_mode,
                         style_name=selected_style,
+                        mini_cli=mini_cli,
                     )
                     if run_result["error"]:
                         error_message = run_result["error"]
@@ -248,6 +250,7 @@ def index() -> str:
         error_message=error_message,
         model_names=ALL_MODELS,
         selected_model=selected_model,
+        mini_cli=mini_cli,
         image_size_value=image_size_value,
         allowed_sizes=allowed_sizes,
         include_prompt_metadata=include_prompt_metadata,

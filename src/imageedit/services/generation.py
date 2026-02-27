@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 import time
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,7 @@ def run_generation(
     image_urls: str,
     image_input_mode: str,
     style_name: str | None = None,
+    mini_cli: str = "",
 ) -> dict[str, Any]:
     args: list[str] = [selected_model, "--no-preview", "-f", str(prompt_path)]
     if include_prompt_metadata:
@@ -51,6 +53,9 @@ def run_generation(
     meta = {k: v for k, v in meta.items() if v}
     if meta:
         args.extend(["--meta", json.dumps(meta)])
+
+    if mini_cli.strip():
+        args.extend(shlex.split(mini_cli))
 
     try:
         parsed = parse_args(args)
