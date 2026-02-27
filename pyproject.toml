@@ -25,10 +25,10 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "mypy>=1.18.2",
     "pre-commit>=4.5.1",
     "pytest>=8.4.2",
     "ruff>=0.14.5",
+    "ty>=0.0.19",
 ]
 
 
@@ -60,5 +60,5 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 
-[tool.mypy]
-files = ["src"]
+[tool.ty.src]
+include = ["src"]

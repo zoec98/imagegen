@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import piexif  # type: ignore[import-untyped]
+import piexif
 from PIL import Image
 
 logger = logging.getLogger(__name__)

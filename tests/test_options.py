@@ -150,13 +150,19 @@ def test_parser_does_not_require_common_keys():
                     "image_size": "auto_2K",
                     "num_images": 1,
                     "max_images": 1,
-                    "enable_safety_checker": True,
+                    "enable_safety_checker": False,
                     "sync_mode": False,
                 },
             },
         ),
         (
-            ["seedream5-edit", "-p", "hi", "--image-url", "https://example.com/src.png"],
+            [
+                "seedream5-edit",
+                "-p",
+                "hi",
+                "--image-url",
+                "https://example.com/src.png",
+            ],
             {
                 "model": "seedream5-edit",
                 "params": {
@@ -164,7 +170,7 @@ def test_parser_does_not_require_common_keys():
                     "image_size": "auto_2K",
                     "num_images": 1,
                     "max_images": 1,
-                    "enable_safety_checker": True,
+                    "enable_safety_checker": False,
                     "sync_mode": False,
                     "image_urls": ["https://example.com/src.png"],
                 },

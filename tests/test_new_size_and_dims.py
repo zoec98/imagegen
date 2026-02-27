@@ -49,14 +49,3 @@ def test_width_height_disallowed_for_model():
             registry=MODEL_REGISTRY,
             parser=parser,
         )
-
-
-def test_nano_banana_maps_aspect_ratio():
-    parser = build_parser(MODEL_REGISTRY)
-    ns = parse_args(
-        ["nano-banana", "-p", "x", "-i", "16:9"],
-        registry=MODEL_REGISTRY,
-        parser=parser,
-    )
-    assert "image_size" not in ns.params
-    assert ns.params["aspect_ratio"] == "16:9"

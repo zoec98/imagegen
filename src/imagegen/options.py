@@ -604,7 +604,7 @@ def parse_args(
         else:
             params["seed"] = seed_spec.get("default")
 
-    if model_name == "nano-banana" and "image_size" in params:
+    if model_name == "nano-banana-2" and "image_size" in params:
         params["aspect_ratio"] = params.pop("image_size")
 
     jpg_options = _parse_jpg_options(getattr(ns, "jpg_options", None), model_parser)

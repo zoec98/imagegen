@@ -15,17 +15,13 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+import fal_client
 from PIL import Image
 
 from image_common.env import save_clean_copy_enabled
 
 from . import exif
 from .options import ParsedOptions, get_safetensors_url, get_source_image_url
-
-try:  # pragma: no cover - lazy import fallback
-    import fal_client  # type: ignore
-except ImportError:  # pragma: no cover
-    fal_client = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +55,6 @@ def generate_images_with_urls(
 ) -> tuple[list[Path], list[str]]:
     """Invoke the target fal endpoint and return paths with their source URLs."""
 
-    client = _require_fal_client()
-
     endpoint = parsed.endpoint
     arguments = dict(parsed.params)
     call_type = parsed.call.lower()
@@ -69,9 +63,11 @@ def generate_images_with_urls(
     start_time = time.perf_counter()
 
     if call_type == "subscribe":
-        invocation = client.subscribe(endpoint, arguments=arguments, with_logs=False)
+        invocation = fal_client.subscribe(
+            endpoint, arguments=arguments, with_logs=False
+        )
     else:
-        invocation = client.run(endpoint, arguments=arguments)
+        invocation = fal_client.run(endpoint, arguments=arguments)
 
     elapsed = time.perf_counter() - start_time
     _emit_elapsed(elapsed)
@@ -243,7 +239,7 @@ def _download(url: str) -> tuple[bytes, str | None]:
 
 
 def _extension_for_url(url: str, content_type: str | None) -> str:
-    parsed = urllib.parse.urlparse(url)
+    parsed = urlparse(url)
     suffix = Path(parsed.path).suffix.lower()
 
     if suffix in {".png", ".jpg", ".jpeg"}:
@@ -257,20 +253,6 @@ def _extension_for_url(url: str, content_type: str | None) -> str:
             return ".jpg"
 
     return ".png"
-
-
-def _require_fal_client():
-    global fal_client
-    if fal_client is None:  # type: ignore[truthy-function]
-        try:
-            import fal_client as imported  # type: ignore
-        except ImportError as exc:  # pragma: no cover
-            raise RuntimeError(
-                "fal_client is required to generate images. "
-                "Install the fal SDK and ensure it is importable."
-            ) from exc
-        fal_client = imported  # type: ignore
-    return fal_client  # type: ignore
 
 
 def _emit_request_info(
@@ -395,12 +377,11 @@ def _write_jpg(path: Path, data: bytes, options: Mapping[str, Any]) -> None:
 
 def upload_image(path: Path) -> str:
     """Upload a local file to fal storage and return the URL."""
-    client = _require_fal_client()
     # verify path exists
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
-    url = client.upload_file(str(path))
+    url = fal_client.upload_file(path)
     return url
 
 

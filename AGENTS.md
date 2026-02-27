@@ -27,7 +27,7 @@
 - `uv run pytest` runs the full suite; we always run all tests because this is fast enough.
 - `uv run ruff format` to format the source code, run before pushing.
 - `uv run ruff check --fix` to lint (and autofix) the source where needed, run before pushing.
-- `uv run mypy src` typing clean; run before pushing.
+- `uv run ty check src` typing clean; run before pushing.
 
 ## Coding Style & Naming Conventions
 - Target Python 3.13+, 4-space indent, `ruff format`-formatted code; avoid manual wrapping.
@@ -43,7 +43,7 @@
 ## Commit & Pull Request Guidelines
 - History shows short present-tense summaries (e.g., `Option parsing`); follow that style and stay under 60 chars.
 - PRs should link tickets when relevant, describe behavioral changes, and attach CLI output if it clarifies the result.
-- Verify `ruff format`, `mypy`, and `pytest` locally; we always run the full test suite because this is fast enough.
+- Verify `ruff format`, `ty check`, and `pytest` locally; we always run the full test suite because this is fast enough.
   Call out any skipped checks with justification.
 
 ## Agent-Specific Notes
@@ -58,3 +58,4 @@
 - For the Flask app, make use of the Flask ecosystem and use existing Flask modules where useful
   (forms, validation, sessions, etc.)
 - Treat `registry.py` as the source of truth; document and test any change in available options.
+- We rely on `uv` to provide the dependency environment, so import `fal_client` directly (no lazy fallback).

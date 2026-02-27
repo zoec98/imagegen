@@ -62,7 +62,7 @@ and the above example command will render the image of a cookie into assets/.
 This will cost $0.03 at the time of writing.
 
 Use `uv run imagegen --help` to see the models registered in this repository 
-(e.g., schnell, dev, flux-2, flux-2-pro, nano-banana, …).
+(e.g., schnell, dev, flux-2, flux-2-pro, nano-banana-2, …).
 
 To run with a prompt file, place the prompt file into the `prompts/` directory with a `.txt` extension.
 This will allow you to run `uv run imagegen -f <prompt_file_name>`.
@@ -281,7 +281,7 @@ uv run pytest -q
 ```
 uv run ruff check
 uv run ruff format --check
-uv run mypy src
+uv run ty check src
 ```
 
 ## Releasing changes
