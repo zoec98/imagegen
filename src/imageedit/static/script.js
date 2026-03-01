@@ -1075,14 +1075,13 @@ function initModelSizeSync() {
                 urlsGroup.style.display = supportsUrls ? 'block' : 'none';
             }
 
-            // Enable/disable Upload buttons based on whether the model
-            // supports images natively.
+            // Enable/disable Upload buttons based on whether the current model supports images
             const canUpload = supportsUrls;
             document.querySelectorAll('.upload-asset-btn').forEach(btn => {
                 btn.disabled = !canUpload;
                 btn.title = canUpload
-                    ? 'Upload this image as a source for the model.'
-                    : 'The current model does not support source images.';
+                    ? 'Upload this image.'
+                    : 'The current model does not support image inputs.';
             });
 
             // Clear existing options
@@ -1123,8 +1122,8 @@ function initUploadAssetBtns() {
         document.querySelectorAll('.upload-asset-btn').forEach(btn => {
             btn.disabled = !canUpload;
             btn.title = canUpload
-                ? 'Upload this image as a source for the model.'
-                : 'The current model does not support source images.';
+                ? 'Upload this image.'
+                : 'The current model does not support image inputs.';
         });
     }
 
