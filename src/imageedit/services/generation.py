@@ -49,6 +49,7 @@ def run_generation(
     meta = {
         "prompt_name": prompt_name,
         "style_name": style_name,
+        "mini_cli": mini_cli,
     }
     meta = {k: v for k, v in meta.items() if v}
     if meta:

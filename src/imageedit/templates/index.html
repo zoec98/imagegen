@@ -137,6 +137,30 @@
           </details>
         </div>
 
+
+        <details class="control-group" id="mini-cli-group" {% if mini_cli %}open{% endif %}>
+          <summary title="Expand to add model-specific CLI arguments.">Mini CLI Args</summary>
+
+          <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; margin-top: 0.25rem;">
+            Click a flag to set a value. Leave the value blank and click Set to remove the flag.
+          </div>
+
+          <input type="hidden" id="mini-cli" name="mini_cli" value="{{ mini_cli }}">
+
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;" id="cli-input-container">
+            <div style="display: flex; flex: 1; min-width: 250px; gap: 0.5rem;">
+              <input type="text" id="cli-val-input" placeholder="Click a flag below to set its value" disabled
+                style="flex: 1; min-width: 0; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; box-sizing: border-box; font-family: monospace;">
+              <button type="button" id="cli-set-btn" disabled
+                style="padding: 0 1.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-panel); color: var(--text-primary); cursor: pointer; transition: all 0.2s; white-space: nowrap;">Set</button>
+            </div>
+          </div>
+
+          <div class="cli-bubbles" id="cli-hint-bubbles">
+            <!-- Populated dynamically by script.js based on the selected model -->
+          </div>
+        </details>
+
         <div class="control-group">
           <label class="checkbox-label" style="display:flex;">
             <input type="hidden" name="include_prompt_metadata" value="off">
@@ -146,14 +170,6 @@
             <span class="info-icon" title="Embeds the model name and prompt text into the image file's metadata tags."
               data-tooltip="Embeds the model name and prompt text into the image file's metadata tags.">?</span>
           </label>
-        </div>
-
-        <div class="control-group">
-          <label for="mini-cli"
-            style="font-size: 0.85em; font-weight: 500; margin-bottom: 0.25rem; display: block;">Mini CLI Args</label>
-          <input type="text" id="mini-cli" name="mini_cli" value="{{ mini_cli }}"
-            placeholder="e.g. --seed 42 --num-images 2" title="Pass extra CLI arguments directly to the model."
-            style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; box-sizing: border-box; font-family: monospace;">
         </div>
 
         <!-- Hidden button for style append logic -->
@@ -192,10 +208,15 @@
             <a href="https://fal.ai/dashboard/billing" target="_blank" class="usage-link"
               title="Open fal.ai usage and billing.">(Check Usage)</a>
           </label>
-          <button class="primary" type="submit" form="main-form" name="action" value="run"
+          <button class="primary" type="submit" form="main-form" name="action" value="run" id="generate-btn"
             title="(g) Generate an image from the current prompt.">
             <span>Generate Image</span>
             <span style="font-size: 1.2em;">&rarr;</span>
+          </button>
+          <button type="button" id="cancel-btn" class="danger"
+            style="display:none; padding: 0.45rem 1rem; font-size: 0.85rem;"
+            title="Cancel the current generation request.">
+            Cancel
           </button>
         </div>
         <textarea form="main-form" id="prompt-text" name="prompt_text" spellcheck="true"
@@ -377,7 +398,8 @@
           <button type="button" id="cancel-delete-prompt-btn" class="secondary"
             title="Cancel deleting the prompt.">Cancel</button>
           <button type="button" id="confirm-delete-prompt-btn" class="danger"
-            title="Delete this prompt permanently.">Yes, Delete</button>
+            title="Delete this prompt permanently.">Yes,
+            Delete</button>
         </div>
       </div>
     </div>

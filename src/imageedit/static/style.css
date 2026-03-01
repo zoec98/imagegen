@@ -878,3 +878,60 @@ input:checked+.slider:before {
     color: var(--text-on-accent);
     border-color: var(--accent);
 }
+
+/* CLI Bubbles */
+.cli-bubbles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.cli-bubble {
+    font-size: 0.75rem;
+    font-family: monospace;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.15rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.cli-bubble:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.cli-bubble.active {
+    background: var(--accent);
+    color: var(--text-on-accent);
+    border-color: var(--accent);
+}
+
+.cli-bubble.editing {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cli-val {
+    margin-left: 0.25rem;
+    padding-left: 0.25rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: bold;
+}
+
+#cli-val-input:disabled {
+    background: var(--bg-panel);
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+#cli-set-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}

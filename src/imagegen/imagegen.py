@@ -112,6 +112,7 @@ def generate_images_with_urls(
         # Fallback to model name if we have nothing
         base_component = _sanitize_component(parsed.model)
 
+    multiple_urls = len(urls) > 1
     written: list[Path] = []
     for _index, url in enumerate(urls, start=1):
         data, content_type = _download(url)
@@ -119,7 +120,9 @@ def generate_images_with_urls(
         convert_to_jpg = parsed.as_jpg and suffix == ".png"
         if convert_to_jpg:
             suffix = ".jpg"
-        filename = f"{base_component}-{timestamp}{suffix}"
+
+        idx_str = f"-{_index}" if multiple_urls else ""
+        filename = f"{base_component}-{timestamp}{idx_str}{suffix}"
         path = output_dir / filename
         if convert_to_jpg:
             _write_jpg(path, data, parsed.jpg_options)

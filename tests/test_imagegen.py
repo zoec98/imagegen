@@ -108,8 +108,8 @@ def test_generate_images_run_invocation(monkeypatch, tmp_path, reload_imagegen):
     assert captured["arguments"]["prompt"] == "hello"
     assert len(output) == 2
 
-    expected_1 = tmp_path / "cats-hello-20260104_114516.png"
-    expected_2 = tmp_path / "cats-hello-20260104_114516.jpg"
+    expected_1 = tmp_path / "cats-hello-20260104_114516-1.png"
+    expected_2 = tmp_path / "cats-hello-20260104_114516-2.jpg"
 
     assert output == [expected_1, expected_2]
     assert expected_1.read_bytes() == b"img1"

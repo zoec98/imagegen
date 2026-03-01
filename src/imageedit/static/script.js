@@ -968,16 +968,27 @@ function initLoadingStates() {
 
         // Only show loading for the "Run" action as it takes time
         if (submitter && submitter.value === 'run') {
-            const originalText = submitter.innerHTML;
+            const originalHTML = submitter.innerHTML;
             const originalWidth = submitter.offsetWidth; // Keep width fixed
 
             submitter.style.width = `${originalWidth}px`;
             submitter.innerHTML = '<span>Generating...</span> <span class="spinner"></span>';
             submitter.classList.add('loading');
 
-            // We don't disable immediately to allow the form data to send, 
-            // but in a real SPA we would. Here let it submit.
-            // Re-enabling happens automatically when page reloads.
+            // Show the cancel button
+            const cancelBtn = document.getElementById('cancel-btn');
+            if (cancelBtn) {
+                cancelBtn.style.display = '';
+                cancelBtn.onclick = () => {
+                    // Abort the pending navigation
+                    window.stop();
+                    // Restore the generate button
+                    submitter.innerHTML = originalHTML;
+                    submitter.classList.remove('loading');
+                    submitter.style.width = '';
+                    cancelBtn.style.display = 'none';
+                };
+            }
         }
     });
 }
@@ -1065,15 +1076,13 @@ function initModelSizeSync() {
             }
 
             // Enable/disable Upload buttons based on whether the model
-            // supports images or has an -edit variant available
-            const hasEditVariant = !model.endsWith('-edit') &&
-                !!modelSelect.querySelector(`option[value="${model}-edit"]`);
-            const canUpload = supportsUrls || hasEditVariant;
+            // supports images natively.
+            const canUpload = supportsUrls;
             document.querySelectorAll('.upload-asset-btn').forEach(btn => {
                 btn.disabled = !canUpload;
                 btn.title = canUpload
-                    ? 'Upload this image and switch to an edit model.'
-                    : 'No edit model available for the current selection.';
+                    ? 'Upload this image as a source for the model.'
+                    : 'The current model does not support source images.';
             });
 
             // Clear existing options
@@ -1092,6 +1101,11 @@ function initModelSizeSync() {
             // Ensure default is selected
             sizeSelect.value = defaultSize;
 
+            // Rebuild CLI flag pills for the new model
+            if (data.cli_flags && typeof renderCliBubbles === 'function') {
+                renderCliBubbles(data.cli_flags);
+            }
+
         } catch (err) {
             console.error('Failed to fetch model sizes:', err);
         }
@@ -1105,14 +1119,12 @@ function initUploadAssetBtns() {
         const model = modelSelect.value;
         const urlsGroup = document.getElementById('image-urls-group');
         const supportsUrls = urlsGroup && urlsGroup.style.display !== 'none';
-        const hasEditVariant = !model.endsWith('-edit') &&
-            !!modelSelect.querySelector(`option[value="${model}-edit"]`);
-        const canUpload = supportsUrls || hasEditVariant;
+        const canUpload = supportsUrls;
         document.querySelectorAll('.upload-asset-btn').forEach(btn => {
             btn.disabled = !canUpload;
             btn.title = canUpload
-                ? 'Upload this image and switch to an edit model.'
-                : 'No edit model available for the current selection.';
+                ? 'Upload this image as a source for the model.'
+                : 'The current model does not support source images.';
         });
     }
 
@@ -1181,4 +1193,198 @@ function initUploadAssetBtns() {
             btn.disabled = false;
         }
     });
+
+    // CLI Bubbles Logic
+    const hiddenCliInput = document.getElementById('mini-cli');
+    const cliBubblesContainer = document.getElementById('cli-hint-bubbles');
+    const cliValInput = document.getElementById('cli-val-input');
+    const cliSetBtn = document.getElementById('cli-set-btn');
+
+    let activeEditFlag = null; // The flag currently being edited in the text box
+    const currentFlags = {}; // Map of flag -> value
+
+    /**
+     * Dynamically rebuild CLI pill bubbles from an array of flag descriptors.
+     * Each item: { flag: "--seed", type: "int", help: "..." }
+     */
+    window.renderCliBubbles = function renderCliBubbles(flags) {
+        if (!cliBubblesContainer) return;
+        cliBubblesContainer.innerHTML = '';
+        flags.forEach(f => {
+            const span = document.createElement('span');
+            span.className = 'cli-bubble';
+            span.setAttribute('data-flag', f.flag);
+            span.setAttribute('data-type', f.type);
+            span.title = f.help || '';
+            span.textContent = f.flag;
+            cliBubblesContainer.appendChild(span);
+        });
+        // Re-apply any existing selected flags to the new bubbles
+        if (window.updateHiddenInputAndUI) {
+            window.updateHiddenInputAndUI();
+        }
+    };
+
+    // Fetch initial CLI flags for the currently selected model
+    (async () => {
+        const modelSelect = document.getElementById('model-name');
+        if (!modelSelect) return;
+        const model = modelSelect.value;
+        if (!model) return;
+        try {
+            const response = await apiFetch(`/api/model-sizes/${encodeURIComponent(model)}`);
+            if (!response.ok) return;
+            const data = await response.json();
+            if (data.cli_flags) {
+                renderCliBubbles(data.cli_flags);
+            }
+        } catch (err) {
+            console.error('Failed to fetch initial CLI flags:', err);
+        }
+    })();
+
+    if (hiddenCliInput && cliBubblesContainer) {
+        // Parse initial value from hidden input
+        const initialVal = hiddenCliInput.value.trim();
+        if (initialVal) {
+            const parts = initialVal.split(/\s+(?=--)/);
+            parts.forEach(part => {
+                if (!part) return;
+                const splitIndex = part.indexOf(' ');
+                if (splitIndex === -1) {
+                    currentFlags[part] = true; // Boolean flag
+                } else {
+                    currentFlags[part.substring(0, splitIndex)] = part.substring(splitIndex + 1);
+                }
+            });
+        }
+
+        window.updateHiddenInputAndUI = function updateHiddenInputAndUI() {
+            const parts = [];
+            document.querySelectorAll('.cli-bubble').forEach(bubble => {
+                const flag = bubble.getAttribute('data-flag');
+
+                // Reset visual state
+                bubble.classList.remove('active');
+                const existingVal = bubble.querySelector('.cli-val');
+                if (existingVal) existingVal.remove();
+
+                if (currentFlags[flag] !== undefined) {
+                    bubble.classList.add('active');
+                    if (currentFlags[flag] !== true) { // Has a value
+                        parts.push(`${flag} ${currentFlags[flag]}`);
+                        const valSpan = document.createElement('span');
+                        valSpan.className = 'cli-val';
+                        valSpan.textContent = ` ${currentFlags[flag]}`;
+                        bubble.appendChild(valSpan);
+                    } else { // Boolean flag
+                        parts.push(flag);
+                    }
+                }
+            });
+
+            // Reconstruct hidden input (including flags not represented by bubbles)
+            Object.keys(currentFlags).forEach(flag => {
+                const hasBubble = document.querySelector(`.cli-bubble[data-flag="${flag}"]`);
+                if (!hasBubble) {
+                    if (currentFlags[flag] !== true) {
+                        parts.push(`${flag} ${currentFlags[flag]}`);
+                    } else {
+                        parts.push(flag);
+                    }
+                }
+            });
+
+            hiddenCliInput.value = parts.join(' ');
+        };
+
+        // Initialize UI
+        window.updateHiddenInputAndUI();
+
+        // Handle clicking a bubble
+        cliBubblesContainer.addEventListener('click', (e) => {
+            const bubble = e.target.closest('.cli-bubble');
+            if (!bubble) return;
+
+            const flag = bubble.getAttribute('data-flag');
+            const type = bubble.getAttribute('data-type');
+
+            if (type === 'boolean') {
+                // Toggle immediately
+                if (currentFlags[flag]) {
+                    delete currentFlags[flag];
+                } else {
+                    currentFlags[flag] = true;
+                }
+                window.updateHiddenInputAndUI();
+            } else {
+                // Prepare for value edit
+                activeEditFlag = flag;
+                cliValInput.disabled = false;
+                cliSetBtn.disabled = false;
+
+                // Load existing value or prompt for new one
+                cliValInput.value = currentFlags[flag] || '';
+                cliValInput.placeholder = `<${type}>`;
+                cliValInput.focus();
+
+                // Highlight the bubble being edited
+                document.querySelectorAll('.cli-bubble').forEach(b => b.classList.remove('editing'));
+                bubble.classList.add('editing');
+            }
+        });
+
+        // Handle saving a value
+        function commitValue() {
+            if (!activeEditFlag) return;
+            const val = cliValInput.value.trim();
+            const bubble = document.querySelector(`.cli-bubble[data-flag="${activeEditFlag}"]`);
+            const type = bubble ? bubble.getAttribute('data-type') : 'string';
+
+            if (!val) {
+                // Remove the flag if empty
+                delete currentFlags[activeEditFlag];
+            } else {
+                // Basic validation
+                if (type === 'int' && !/^-?\d+$/.test(val)) {
+                    alert('Please enter a valid integer.');
+                    cliValInput.focus();
+                    return;
+                }
+                if (type === 'float' && isNaN(parseFloat(val))) {
+                    alert('Please enter a valid number.');
+                    cliValInput.focus();
+                    return;
+                }
+                currentFlags[activeEditFlag] = val;
+            }
+
+            window.updateHiddenInputAndUI();
+
+            // Reset edit state
+            activeEditFlag = null;
+            cliValInput.value = '';
+            cliValInput.disabled = true;
+            cliValInput.placeholder = "Click a flag below to set its value";
+            cliSetBtn.disabled = true;
+            document.querySelectorAll('.cli-bubble').forEach(b => b.classList.remove('editing'));
+        }
+
+        cliSetBtn.addEventListener('click', commitValue);
+
+        cliValInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitValue();
+            } else if (e.key === 'Escape') {
+                // Cancel edit
+                activeEditFlag = null;
+                cliValInput.value = '';
+                cliValInput.disabled = true;
+                cliValInput.placeholder = "Click a flag below to set its value";
+                cliSetBtn.disabled = true;
+                document.querySelectorAll('.cli-bubble').forEach(b => b.classList.remove('editing'));
+            }
+        });
+    }
 }

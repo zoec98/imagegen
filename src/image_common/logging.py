@@ -26,3 +26,13 @@ def configure_logging() -> None:
     )
     httpx_level = logging.WARNING if os.getenv("PYTEST_CURRENT_TEST") else logging.DEBUG
     logging.getLogger("httpx").setLevel(httpx_level)
+
+    # Suppress noisy 200 OK lines for static asset requests.
+    class _QuietAssetFilter(logging.Filter):
+        def filter(self, record: logging.LogRecord) -> bool:
+            msg = record.getMessage()
+            if "/assets/" in msg and '" 200' in msg:
+                return False
+            return True
+
+    logging.getLogger("werkzeug").addFilter(_QuietAssetFilter())

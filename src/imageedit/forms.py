@@ -82,3 +82,56 @@ def parse_gallery_height(raw_value: str | None) -> int:
     except ValueError:
         value = 100
     return max(1, value)
+
+
+# Options handled by dedicated UI controls — not shown as CLI pills.
+_SKIP_CLI_OPTIONS = frozenset(
+    {
+        "prompt",
+        "image_size",
+        "width",
+        "height",
+        "image_url",
+        "image_urls",
+        "acceleration",
+        "sync_mode",
+        "structured_prompt",
+    }
+)
+
+
+def get_cli_flags(model: str) -> list[dict[str, str]]:
+    """Return CLI-eligible flags for *model* as a list of dicts.
+
+    Each dict has keys ``flag``, ``type``, and ``help``.
+    """
+    model_info = MODEL_REGISTRY.get(model, {})
+    options = model_info.get("options", {})
+    result: list[dict[str, str]] = []
+    for name, spec in options.items():
+        if name in _SKIP_CLI_OPTIONS:
+            continue
+        # Derive the long-form flag name.
+        flags = spec.get("flags", [])
+        long_flag = next((f for f in flags if f.startswith("--")), None)
+        if long_flag is None:
+            long_flag = f"--{name.replace('_', '-')}"
+
+        raw_type = spec.get("type")
+        if raw_type is bool:
+            type_str = "boolean"
+        elif raw_type is int:
+            type_str = "int"
+        elif raw_type is float:
+            type_str = "float"
+        else:
+            type_str = "string"
+
+        result.append(
+            {
+                "flag": long_flag,
+                "type": type_str,
+                "help": spec.get("help", ""),
+            }
+        )
+    return result

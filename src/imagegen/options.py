@@ -257,6 +257,8 @@ def _add_standard_option(
 
     if isinstance(opt_type, type) and opt_type in {int, float, str}:
         kwargs["type"] = opt_type
+    if "choices" in option:
+        kwargs["choices"] = option["choices"]
 
     parser.add_argument(*flags, **kwargs)
 

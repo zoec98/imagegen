@@ -30,6 +30,7 @@ from imagegen.registry import MODEL_REGISTRY
 from .forms import (
     default_option,
     get_allowed_sizes,
+    get_cli_flags,
     image_input_mode,
     model_supports_image_urls,
     parse_checkbox,
@@ -352,12 +353,18 @@ def api_get_upload_history():
 
 @bp.route("/api/model-sizes/<model>")
 def api_model_sizes(model: str):
-    """Return allowed sizes for a given model as JSON."""
+    """Return allowed sizes and CLI flags for a given model as JSON."""
     sizes = get_allowed_sizes(model)
     default = default_option(model, "image_size")
     supports_urls = model_supports_image_urls(model)
+    cli_flags = get_cli_flags(model)
     return jsonify(
-        {"sizes": sizes, "default": default, "supports_image_urls": supports_urls}
+        {
+            "sizes": sizes,
+            "default": default,
+            "supports_image_urls": supports_urls,
+            "cli_flags": cli_flags,
+        }
     )
 
 
